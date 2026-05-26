@@ -530,6 +530,24 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     setShowCtl(true);
   }, [alwaysShowControls]);
 
+  // Auto-hide while playing. Without this, mobile users would see
+  // controls forever because there's no mousemove on touch devices —
+  // ``bumpCtl`` only fires on desktop. Watching ``isPlaying`` lets us
+  // arm / disarm the hide timer purely from media state, so tapping the
+  // video to pause re-shows the controls and resuming re-arms the timer.
+  useEffect(() => {
+    if (alwaysShowControls) return;
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    if (isPlaying) {
+      hideTimer.current = setTimeout(() => {
+        if (videoRef.current && !videoRef.current.paused) setShowCtl(false);
+      }, CONTROL_HIDE_MS);
+    } else {
+      // Paused — surface controls so the play button is reachable.
+      setShowCtl(true);
+    }
+  }, [isPlaying, alwaysShowControls]);
+
   useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -916,6 +934,10 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   };
 
   const onVideoTouchStart = useCallback((e: React.TouchEvent<HTMLElement>) => {
+    // Any touch wakes the controls + restarts the auto-hide timer — same
+    // contract as a mouse moving on desktop. Without this the bar would
+    // never auto-hide on phones (no mousemove available).
+    bumpCtl();
     if (e.touches.length === 2) {
       const d = pinchDistance(e.touches);
       touchRef.current = {
@@ -936,7 +958,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     // again, the drag should pick up the finger immediately.
     const el = containerRef.current;
     if (el) { el.style.transition = "none"; }
-  }, []);
+  }, [bumpCtl]);
 
   const onVideoTouchMove = useCallback((e: React.TouchEvent<HTMLElement>) => {
     const st = touchRef.current; if (!st) return;

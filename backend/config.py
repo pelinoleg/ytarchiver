@@ -1,5 +1,8 @@
 from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Annotated
+import json
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -55,7 +58,46 @@ class Settings(BaseSettings):
     # Personal / LAN-only deployment — accept any origin so the PWA works from
     # the phone over Wi-Fi. The service should never be exposed to the public
     # internet anyway.
-    cors_origins: list[str] = ["*"]
+    #
+    # ``NoDecode`` tells pydantic-settings to skip its JSON pre-parsing
+    # for this field. Without it, a non-JSON env value like ``CORS_ORIGINS=*``
+    # blows up at startup because the env source tries ``json.loads`` first.
+    # With NoDecode, the raw env string lands in our validator which knows
+    # how to handle JSON / CSV / bare token forms.
+    cors_origins: Annotated[list[str], NoDecode] = ["*"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, v):
+        """Accept the env value in three friendly forms:
+
+          • JSON array string — ``["http://a", "http://b"]``
+          • Comma-separated list — ``http://a, http://b``
+          • Bare ``*`` (or any single token)
+
+        Default pydantic-settings behaviour is JSON-only, which means a
+        compose file with ``CORS_ORIGINS: "*"`` blows up at startup
+        because ``*`` isn't valid JSON. Worse, even ``["*"]`` can arrive
+        mangled (single-vs-double quoting) depending on the YAML / shell
+        the user wrapped it in. This validator absorbs all of that.
+        """
+        if v is None or v == "":
+            return ["*"]
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("["):
+                # Looks like JSON — try, but don't die if it's quoted weirdly.
+                try:
+                    parsed = json.loads(s)
+                    if isinstance(parsed, list):
+                        return [str(x) for x in parsed]
+                except json.JSONDecodeError:
+                    pass
+            # Comma-separated or single value.
+            return [tok.strip() for tok in s.split(",") if tok.strip()]
+        return ["*"]
 
 
 settings = Settings()

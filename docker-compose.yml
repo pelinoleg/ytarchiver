@@ -61,8 +61,10 @@ services:
       SPONSORBLOCK_API:             https://sponsor.ajay.app
       SPONSORBLOCK_REFRESH_DAYS:    7
 
-      # ── CORS (use ["*"] for LAN; lock to your domain in production) ──
-      CORS_ORIGINS: '["*"]'
+      # ── CORS ──
+      # Comma-separated list of allowed origins, or ``*`` for any.
+      # Tighten to ``https://your.domain`` in production.
+      CORS_ORIGINS: "*"
     expose:
       - "8000"
     healthcheck:

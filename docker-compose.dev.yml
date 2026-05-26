@@ -58,9 +58,10 @@ services:
       SPONSORBLOCK_API:             https://sponsor.ajay.app
       SPONSORBLOCK_REFRESH_DAYS:    7
 
-      # ── CORS (use ["*"] for LAN; lock to your domain in production) ──
-      # JSON array form is what pydantic-settings expects for list[str].
-      CORS_ORIGINS: '["*"]'
+      # ── CORS ──
+      # Comma-separated list of allowed origins, or ``*`` for any.
+      # Tighten to ``https://your.domain`` in production.
+      CORS_ORIGINS: "*"
     # Not exposed to host — frontend's nginx fronts everything.
     expose:
       - "8000"
