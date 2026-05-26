@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vite/
+.DS_Store
+# Local-only stash that has nothing to do with the SPA build.
+data/
+downloads/

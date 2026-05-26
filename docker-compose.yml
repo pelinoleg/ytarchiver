@@ -1,0 +1,83 @@
+# Two-service compose for YT Archiver. Spin up with:
+#
+#     docker compose up -d --build
+#
+# Opens the UI on http://localhost:8080 — nginx serves the built SPA and
+# reverse-proxies /api and /ws to the backend container.
+#
+# State (SQLite DB + downloaded video files) lives on the HOST under
+# ./data and ./downloads — explicit bind mounts, no named volumes, so
+# you can ``ls downloads/`` from outside the container and back up the
+# folder with regular tools. Both directories are created automatically
+# on first run.
+
+services:
+  backend:
+    build: ./backend
+    container_name: ytarchiver-backend
+    restart: unless-stopped
+    # Bind mounts to host paths (NOT named volumes). State stays with the
+    # repo and survives compose down / image rebuilds.
+    volumes:
+      - ./data:/data
+      - ./downloads:/downloads
+    environment:
+      # ── Paths inside the container (match the volume targets above) ──
+      DATA_DIR:     /data
+      DOWNLOAD_DIR: /downloads
+      DB_PATH:      /data/ytarchiver.db
+      LOG_LEVEL:    INFO
+
+      # ── Sync scheduler ──
+      SYNC_INTERVAL_MINUTES:        240
+      SYNC_JITTER_MINUTES:          60
+      MAX_VIDEOS_PER_CHANNEL_SCAN:  50
+      INITIAL_BACKFILL_HARD_CAP:    500
+
+      # ── Quality / retention defaults ──
+      DEFAULT_QUALITY:              "1080"
+      DEFAULT_RETENTION_DAYS:       0
+      DEFAULT_PLAYBACK_RATE:        1.0
+      MUSIC_PLAYBACK_RATE:          1.0
+      DELETE_AFTER_WATCHED_PERCENT: 0
+
+      # ── Worker politeness (delay between consecutive downloads) ──
+      BETWEEN_DOWNLOADS_MIN_SECONDS: 5
+      BETWEEN_DOWNLOADS_MAX_SECONDS: 15
+
+      # ── Hover-preview generation ──
+      PREVIEW_WIDTH:                480
+      PREVIEW_CRF:                  27
+      PREVIEW_SEGMENTS:             12
+
+      # ── Music UI ──
+      MUSIC_QUEUE_PANEL_SIZE:       100
+      MINI_PLAYER_ENABLED:          "true"
+
+      # ── SponsorBlock ──
+      SPONSORBLOCK_API:             https://sponsor.ajay.app
+      SPONSORBLOCK_REFRESH_DAYS:    7
+
+      # ── CORS (use ["*"] for LAN; lock to your domain in production) ──
+      # JSON array form is what pydantic-settings expects for list[str].
+      CORS_ORIGINS: '["*"]'
+    # Not exposed to host — frontend's nginx fronts everything.
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build: ./frontend
+    container_name: ytarchiver-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    # Change the left side if 8080 is already taken on your host.
+    ports:
+      - "8080:80"

@@ -1,0 +1,19 @@
+# Don't ship build artefacts or local state into the image.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Local on-disk data lives on the HOST and is bind-mounted in.
+data/
+downloads/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+.env
+.env.local
+.DS_Store
