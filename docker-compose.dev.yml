@@ -1,26 +1,23 @@
-# Production compose — uses prebuilt images from ghcr.io. No clone needed.
+# Two-service compose for YT Archiver. Spin up with:
 #
-# Run on any host with Docker:
+#     docker compose up -d --build
 #
-#     curl -O https://raw.githubusercontent.com/pelinoleg/ytarchiver/main/docker-compose.yml
-#     docker compose up -d
-#
-# Open http://localhost:8080. nginx (frontend) serves the SPA and
-# reverse-proxies /api + /ws to the backend container.
-#
-# Update to the latest published image:
-#
-#     docker compose pull && docker compose up -d
+# Opens the UI on http://localhost:8080 — nginx serves the built SPA and
+# reverse-proxies /api and /ws to the backend container.
 #
 # State (SQLite DB + downloaded video files) lives on the HOST under
 # ./data and ./downloads — explicit bind mounts, no named volumes, so
-# you can ``ls`` and back them up with regular filesystem tools.
+# you can ``ls downloads/`` from outside the container and back up the
+# folder with regular tools. Both directories are created automatically
+# on first run.
 
 services:
   backend:
-    image: ghcr.io/pelinoleg/ytarchiver-backend:latest
+    build: ./backend
     container_name: ytarchiver-backend
     restart: unless-stopped
+    # Bind mounts to host paths (NOT named volumes). State stays with the
+    # repo and survives compose down / image rebuilds.
     volumes:
       - ./data:/data
       - ./downloads:/downloads
@@ -44,7 +41,7 @@ services:
       MUSIC_PLAYBACK_RATE:          1.0
       DELETE_AFTER_WATCHED_PERCENT: 0
 
-      # ── Worker politeness ──
+      # ── Worker politeness (delay between consecutive downloads) ──
       BETWEEN_DOWNLOADS_MIN_SECONDS: 5
       BETWEEN_DOWNLOADS_MAX_SECONDS: 15
 
@@ -62,7 +59,9 @@ services:
       SPONSORBLOCK_REFRESH_DAYS:    7
 
       # ── CORS (use ["*"] for LAN; lock to your domain in production) ──
+      # JSON array form is what pydantic-settings expects for list[str].
       CORS_ORIGINS: '["*"]'
+    # Not exposed to host — frontend's nginx fronts everything.
     expose:
       - "8000"
     healthcheck:
@@ -73,12 +72,12 @@ services:
       start_period: 20s
 
   frontend:
-    image: ghcr.io/pelinoleg/ytarchiver-frontend:latest
+    build: ./frontend
     container_name: ytarchiver-frontend
     restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
-    # Change the LEFT side if 8080 is already taken on your host.
+    # Change the left side if 8080 is already taken on your host.
     ports:
       - "8080:80"

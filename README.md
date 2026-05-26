@@ -13,14 +13,19 @@ player.
 | Frontend    | React 18 · Vite · TanStack Query · Tailwind v4        |
 | Infra       | Docker + docker-compose · nginx                       |
 
-## Quick start (Docker)
+## Quick start — pre-built images (no clone)
 
 ```bash
-docker compose up -d --build
+mkdir ytarchiver && cd ytarchiver
+curl -O https://raw.githubusercontent.com/pelinoleg/ytarchiver/main/docker-compose.yml
+docker compose up -d
 ```
 
 Open <http://localhost:8080>.
 
+- Images are published to `ghcr.io/pelinoleg/ytarchiver-{backend,frontend}`
+  on every push to `main` — multi-arch (amd64 + arm64), so the same
+  compose works on Apple Silicon and x86 Linux servers.
 - nginx serves the SPA on `:8080` and reverse-proxies `/api` + `/ws` to
   the backend container.
 - SQLite database lives at `./data/ytarchiver.db` (host path).
@@ -28,9 +33,15 @@ Open <http://localhost:8080>.
 - Both directories are explicit bind mounts — back them up with regular
   filesystem tools, no `docker volume` indirection.
 
-All configuration is set in `docker-compose.yml` under
-`services.backend.environment` — change quality, retention defaults, sync
-interval, etc. and `docker compose up -d --build` to apply.
+All configuration sits in `docker-compose.yml` under
+`services.backend.environment` — change quality, retention, sync
+interval, etc. and `docker compose up -d` to apply.
+
+To upgrade to the latest published images:
+
+```bash
+docker compose pull && docker compose up -d
+```
 
 To stop:
 
@@ -39,6 +50,24 @@ docker compose down
 ```
 
 State on disk is **not** removed.
+
+> If `docker pull` complains about authentication, the GHCR package
+> visibility is still set to private (default for new repos). Fix:
+> visit <https://github.com/users/pelinoleg/packages> → each image →
+> Settings → "Change visibility" → Public. Or `docker login ghcr.io`
+> with a personal access token.
+
+## Build from source (alternative)
+
+```bash
+git clone https://github.com/pelinoleg/ytarchiver.git
+cd ytarchiver
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+Same compose, except both services are built locally from the
+`Dockerfile`s in this repo. Useful when iterating on the code or for
+hosting your own fork.
 
 ## Dev (no Docker)
 
