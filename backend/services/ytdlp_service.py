@@ -2,15 +2,46 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
 import yt_dlp
 
+from config import settings
+
 
 log = logging.getLogger(__name__)
+
+
+def yt_opts_extra() -> dict:
+    """Common yt-dlp options that should apply to every YouTube call:
+    cookies file (if configured), alt player_client (if configured). Merge
+    this into the opts dict of any ``yt_dlp.YoutubeDL(opts)`` call so the
+    backend behaves consistently across metadata fetches, downloads, and
+    variant pulls.
+
+    Both knobs target the "Sign in to confirm you're not a bot" wall that
+    YouTube throws at data-center IPs. Cookies are the gold standard.
+    """
+    out: dict = {}
+    if settings.cookies_file:
+        # Allow env-injection of either the path literal or a value that
+        # equals the host-side mount. Skip silently when the file is
+        # missing so the backend still boots without it.
+        p = Path(os.path.expanduser(settings.cookies_file))
+        if p.exists() and p.is_file():
+            out["cookiefile"] = str(p)
+        else:
+            log.warning("cookies_file=%s does not exist; skipping", settings.cookies_file)
+    if settings.youtube_player_client:
+        out["extractor_args"] = {
+            "youtube": {"player_client": [settings.youtube_player_client]},
+        }
+    return out
 
 
 # Channel-page subpaths yt-dlp accepts. We pin to /videos to exclude Shorts/Live tabs.
@@ -37,7 +68,7 @@ def fetch_playlist_info(url: str) -> dict:
         "extract_flat": True, "skip_download": True,
         "playlistend": 1,  # we only need the playlist-level metadata
     }
-    with yt_dlp.YoutubeDL(opts) as ydl:
+    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
         info = ydl.extract_info(url, download=False) or {}
     return {
         "yt_playlist_id": info.get("id"),
@@ -58,7 +89,7 @@ def fetch_playlist_videos(url: str, *, max_videos: int = 500) -> list[dict]:
         "ignoreerrors": True,
         "playlistend": max_videos,
     }
-    with yt_dlp.YoutubeDL(opts) as ydl:
+    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
         info = ydl.extract_info(url, download=False) or {}
     entries = info.get("entries") or []
     out: list[dict] = []
@@ -81,7 +112,7 @@ def fetch_video_info(video_id: str) -> dict:
     """Metadata for a single video — no download. Used by the manual-add flow."""
     opts = {"quiet": True, "no_warnings": True, "skip_download": True}
     url = f"https://www.youtube.com/watch?v={video_id}"
-    with yt_dlp.YoutubeDL(opts) as ydl:
+    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
         info = ydl.extract_info(url, download=False)
     info = info or {}
     return {
@@ -122,7 +153,7 @@ def fetch_channel_info(url: str) -> dict:
         "playlistend": 1,
         "skip_download": True,
     }
-    with yt_dlp.YoutubeDL(opts) as ydl:
+    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
         info = ydl.extract_info(url, download=False)
     return {
         "yt_channel_id": info.get("channel_id") or info.get("uploader_id") or info.get("id"),
@@ -150,7 +181,7 @@ def fetch_channel_videos_flat(
         "playlistend": max_videos,
         "skip_download": True,
     }
-    with yt_dlp.YoutubeDL(opts) as ydl:
+    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
         info = ydl.extract_info(url, download=False)
 
     entries = (info or {}).get("entries") or []

@@ -39,6 +39,19 @@ class Settings(BaseSettings):
     sponsorblock_api: str = "https://sponsor.ajay.app"
     sponsorblock_refresh_days: int = 7
 
+    # Path to a Netscape-format ``cookies.txt`` file. When set and the file
+    # exists, yt-dlp uses it for every YouTube call — the standard fix for
+    # "Sign in to confirm you're not a bot" rate-limits on self-hosted
+    # servers (residential IPs are friendlier than data centers, but YT
+    # still flags us if we hammer enough). Export via a browser extension
+    # (e.g. "Get cookies.txt LOCALLY") while logged into your YT account.
+    cookies_file: str = ""
+
+    # Alternative yt-dlp player client. Empty → yt-dlp's default cascade.
+    # Common values: ``android``, ``ios``, ``web_safari``. Sometimes the
+    # android client gets past bot detection that web/web_embedded can't.
+    youtube_player_client: str = ""
+
     # Worker politeness — random pause between consecutive downloads to avoid
     # hammering YouTube.
     between_downloads_min_seconds: int = 5

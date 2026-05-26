@@ -24,6 +24,11 @@ services:
     volumes:
       - ./data:/data
       - ./downloads:/downloads
+      # Drop your YouTube cookies.txt into ./cookies/youtube.txt to bypass
+      # "Sign in to confirm you're not a bot" rate-limits. See README for
+      # how to export. The mount is read-only — the backend never writes
+      # back. Safe to leave the directory empty; backend boots regardless.
+      - ./cookies:/cookies:ro
     environment:
       # ── Paths inside the container (match the volume targets above) ──
       DATA_DIR:     /data
@@ -60,6 +65,19 @@ services:
       # ── SponsorBlock ──
       SPONSORBLOCK_API:             https://sponsor.ajay.app
       SPONSORBLOCK_REFRESH_DAYS:    7
+
+      # ── YouTube bot-detection bypass ──
+      # Drop a Netscape-format cookies.txt at ``./cookies/youtube.txt`` on
+      # the host (mounted read-only into /cookies) to make yt-dlp use your
+      # browser session — the most reliable cure for "Sign in to confirm
+      # you're not a bot" errors. If the file is missing the backend just
+      # runs without cookies (default behavior).
+      COOKIES_FILE: /cookies/youtube.txt
+
+      # Force a specific yt-dlp player client. Empty = let yt-dlp pick.
+      # Try "android" if you keep hitting bot walls — it talks to a
+      # different YT endpoint that's sometimes more lenient than ``web``.
+      YOUTUBE_PLAYER_CLIENT: ""
 
       # ── CORS ──
       # Comma-separated list of allowed origins, or ``*`` for any.

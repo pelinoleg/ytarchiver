@@ -21,6 +21,7 @@ services:
     volumes:
       - ./data:/data
       - ./downloads:/downloads
+      - ./cookies:/cookies:ro
     environment:
       # ── Paths inside the container (match the volume targets above) ──
       DATA_DIR:     /data
@@ -62,6 +63,10 @@ services:
       # Comma-separated list of allowed origins, or ``*`` for any.
       # Tighten to ``https://your.domain`` in production.
       CORS_ORIGINS: "*"
+
+      # ── YouTube bot-detection bypass ──
+      COOKIES_FILE: /cookies/youtube.txt
+      YOUTUBE_PLAYER_CLIENT: ""
     # Not exposed to host — frontend's nginx fronts everything.
     expose:
       - "8000"

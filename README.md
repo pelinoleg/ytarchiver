@@ -57,6 +57,46 @@ State on disk is **not** removed.
 > Settings → "Change visibility" → Public. Or `docker login ghcr.io`
 > with a personal access token.
 
+## "Sign in to confirm you're not a bot"
+
+Self-hosted yt-dlp on a NAS / VPS will eventually hit YouTube's bot wall —
+data-center IPs are noisy and YT flags them after a handful of requests.
+The fix is to give yt-dlp your **browser cookies**, so the requests look
+like a logged-in human's instead of an anonymous data-center crawler.
+
+1. **In your browser, log in to youtube.com** with a regular account.
+   A throwaway account is fine — YouTube doesn't care, but throwaway
+   accounts are easier to ban, so a real low-traffic one is safer.
+2. Install a "cookies.txt exporter" extension — e.g.
+   <https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc>
+   (the "LOCALLY" version doesn't ship cookies anywhere; verify the
+   source if you care).
+3. With <https://www.youtube.com> open, click the extension → **Export**
+   → save as `cookies.txt`.
+4. Drop it next to your compose file:
+
+   ```
+   ytarchiver/
+     docker-compose.yml
+     cookies/
+       youtube.txt      ← here, exactly this name
+   ```
+
+5. Restart the backend:
+
+   ```bash
+   docker compose up -d backend
+   ```
+
+The mount is `./cookies:/cookies:ro` — read-only on the container side,
+so yt-dlp can't accidentally update / delete your file. Empty
+`./cookies/` is fine too; the backend just runs without cookies and you
+get the bot wall back.
+
+If cookies don't help (rare), try setting `YOUTUBE_PLAYER_CLIENT: android`
+in `docker-compose.yml` — that uses the Android API which sometimes
+slips past detection that blocks the web client.
+
 ## Build from source (alternative)
 
 ```bash
