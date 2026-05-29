@@ -1,9 +1,9 @@
 import { NavLink, useLocation, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Library, Download, History, Tv, FolderDown, Star, Activity,
   Loader2, Database, ListMusic, Music, HardDrive, ChevronDown, ChevronUp,
-  Home,
+  Home, Pause, Play,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import {
@@ -187,6 +187,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         <div className="flex-shrink-0 border-t border-zinc-800 px-2 py-1">
           <CompactLink icon={Library}   label="Subscriptions" to="/subscriptions" />
           <CompactDownloadsLink count={queue.length} active={downloading} pct={downloadingPct} />
+          <CompactPauseResume />
           <CompactLink icon={History}   label="History"  to="/history" />
           <CompactLink icon={HardDrive} label="Storage"  to="/storage"  />
           <CompactLink icon={Activity}  label="Activity" to="/events" />
@@ -507,6 +508,50 @@ function CompactDownloadsLink({
         </div>
       )}
     </NavLink>
+  );
+}
+
+/** Global Pause All / Resume All — sits next to Downloads so the user can
+ *  freeze the whole worker from anywhere without navigating to /downloads. */
+function CompactPauseResume() {
+  const qc = useQueryClient();
+  const { data: status } = useQuery({
+    queryKey: ["queue-status"],
+    queryFn: queueApi.status,
+    refetchInterval: 10_000,
+  });
+  const toggle = useMutation({
+    mutationFn: () => (status?.paused ? queueApi.resume() : queueApi.pause()),
+    onSuccess: (next) => {
+      qc.setQueryData(["queue-status"], next);
+      qc.invalidateQueries({ queryKey: ["queue"] });
+    },
+  });
+  const paused = !!status?.paused;
+  return (
+    <button
+      type="button"
+      onClick={() => toggle.mutate()}
+      disabled={toggle.isPending}
+      title={paused ? "Возобновить все загрузки" : "Поставить все загрузки на паузу"}
+      className={
+        "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-[13px] text-left transition " +
+        (paused
+          ? "bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
+          : "text-white opacity-55 hover:opacity-100 hover:bg-zinc-900") +
+        (toggle.isPending ? " opacity-60" : "")
+      }
+    >
+      {paused
+        ? <Play  className="h-4 w-4 flex-shrink-0" />
+        : <Pause className="h-4 w-4 flex-shrink-0" />}
+      <span className="truncate flex-1">{paused ? "Resume all" : "Pause all"}</span>
+      {paused && (
+        <span className="rounded-full bg-amber-500/30 px-1.5 text-[10px] font-medium text-amber-100">
+          paused
+        </span>
+      )}
+    </button>
   );
 }
 
