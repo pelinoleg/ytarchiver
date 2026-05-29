@@ -1122,11 +1122,18 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
           // hidden, leaving black triangles in the corners.
           //
           // ``touch-none`` lets the swipe gestures own all touch events.
+          //
+          // ``sm:max-h-[78vh]`` caps how tall the player gets on landscape
+          // phones / tablets / desktop. Without it, a square or vertical
+          // source on a 1000-px column renders 1000 px tall and dominates
+          // the viewport. With max-h + object-contain the video shrinks to
+          // fit and the wider container gets letterboxed (matches YouTube's
+          // behavior for non-16:9 sources).
           style={isFs ? undefined : { aspectRatio }}
           className={`block bg-black w-full touch-none ${
             isFs
               ? `h-full ${objectFit === "cover" ? "object-cover" : "object-contain"}`
-              : `${objectFit === "cover" ? "object-cover" : "object-contain"} sm:rounded-xl`
+              : `${objectFit === "cover" ? "object-cover" : "object-contain"} sm:max-h-[78vh] sm:rounded-xl`
           }`}
         >
           {video.has_subtitle && !isTouch && (
