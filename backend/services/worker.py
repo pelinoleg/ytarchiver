@@ -91,6 +91,21 @@ def _kv_int(key: str, default: int) -> int:
         return default
 
 
+def _reclaim_stuck_downloads() -> int:
+    """Flip any leftover ``downloading`` rows back to ``pending``. Called on
+    worker startup — handles the container-died-mid-download case."""
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            "UPDATE videos SET status = 'pending', progress = NULL "
+            "WHERE status = 'downloading'"
+        )
+        conn.commit()
+        return cur.rowcount or 0
+    finally:
+        conn.close()
+
+
 class DownloadWorker:
     def __init__(self) -> None:
         self._coordinator: Optional[asyncio.Task] = None
@@ -109,6 +124,14 @@ class DownloadWorker:
             return
         self._loop = asyncio.get_running_loop()
         progress.set_loop(self._loop)
+        # Reclaim any rows that were ``downloading`` when the previous process
+        # died (container restart, OOM, host reboot mid-fetch). Without this,
+        # they'd stay stuck forever — _claim_next_pending only looks at status
+        # = 'pending'. We don't preserve their progress %; yt-dlp resumes via
+        # partial files on disk anyway.
+        reclaimed = _reclaim_stuck_downloads()
+        if reclaimed:
+            log.warning("worker: reclaimed %d stuck 'downloading' rows → pending", reclaimed)
         self._running = True
         self._coordinator = asyncio.create_task(
             self._coordinator_loop(), name="download-coordinator",
