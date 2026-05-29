@@ -513,10 +513,14 @@ class DB:
         return self.get_or_create_manual_channel()
 
     def count_manual_videos(self) -> int:
+        # Must mirror list_manual_videos exactly — otherwise the sidebar badge
+        # claims N items but the page lists M<N. The hidden-because-music gap
+        # was the user-reported "72 in sidebar, 0 on page" bug.
         row = self.conn.execute(
-            "SELECT COUNT(*) FROM videos v "
-            "JOIN channels c ON c.id = v.channel_id "
-            "WHERE c.yt_channel_id = ? AND v.status = 'done' AND v.is_short = 0",
+            f"SELECT COUNT(*) FROM videos v "
+            f"JOIN channels c ON c.id = v.channel_id "
+            f"WHERE c.yt_channel_id = ? AND v.status = 'done' AND v.is_short = 0 "
+            f"  AND {NOT_MUSIC_SQL}",
             (self.MANUAL_CHANNEL_MARKER,),
         ).fetchone()
         return row[0] if row else 0
