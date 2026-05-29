@@ -210,7 +210,7 @@ export function VideoCard({ video }: { video: Video }) {
           {video.channel_name && (
             <button
               onClick={gotoChannel}
-              className="block truncate text-left text-xs text-zinc-400 hover:text-zinc-200"
+              className="block w-full max-w-full truncate text-left text-xs text-zinc-400 hover:text-zinc-200"
               title={video.channel_name}
             >
               {video.channel_name}

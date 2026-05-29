@@ -306,7 +306,8 @@ function ActiveCard({ v }: { v: Video }) {
           {v.channel_name && (
             <Link
               to={`/channel/${v.channel_id}`}
-              className="mt-0.5 inline-block truncate text-xs text-zinc-400 hover:text-zinc-200"
+              className="mt-0.5 block max-w-full truncate text-xs text-zinc-400 hover:text-zinc-200"
+              title={v.channel_name}
             >
               {v.channel_name}
             </Link>

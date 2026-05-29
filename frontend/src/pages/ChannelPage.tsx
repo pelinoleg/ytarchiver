@@ -202,7 +202,10 @@ function ChannelHeader({
         {/* Name, stats, action buttons */}
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-2">
-            <h1 className="min-w-0 flex-1 text-xl sm:text-2xl font-semibold tracking-tight break-words">
+            <h1
+              className="min-w-0 flex-1 text-xl sm:text-2xl font-semibold tracking-tight break-words line-clamp-2"
+              title={channel.name}
+            >
               {channel.name}
             </h1>
             {youtubeChannelUrl(channel.url) && (
