@@ -372,7 +372,14 @@ export function WatchPage() {
           // corners there). On sm+ the inner player is rounded-xl, and a
           // bg-black on this square outer wrapper would show as black
           // triangles behind the rounded corners — hence ``sm:bg-transparent``.
-          className="order-1 lg:row-start-1 lg:col-start-1 sticky z-30 bg-black sm:bg-transparent -mx-4 sm:mx-0 relative"
+          //
+          // Sticky pinning is mobile-only. On desktop (lg+) the page scrolls
+          // normally so the user can read description / metadata without the
+          // video covering half the column. ``lg:relative`` keeps absolutely
+          // positioned overlays (MediaErrorOverlay, EndScreen) anchored.
+          // ``lg:!top-auto`` neutralizes the sticky offset so the player
+          // doesn't shift down on desktop.
+          className="order-1 lg:row-start-1 lg:col-start-1 sticky lg:relative lg:!top-auto z-30 bg-black sm:bg-transparent -mx-4 sm:mx-0 relative"
           style={{ top: "var(--header-safe-top)" }}
         >
           {mediaError && video.status === "done" && (
@@ -593,7 +600,6 @@ export function WatchPage() {
             order-3
             lg:order-none lg:row-start-1 lg:row-span-2 lg:col-start-2
             mt-6 lg:mt-0
-            lg:max-h-[calc(100vh-6rem-env(safe-area-inset-top))] lg:overflow-y-auto lg:pr-1
           "
         >
           {video.status === "done" && (
