@@ -43,6 +43,16 @@ html, body, #root {
   height: 100%;
 }
 
+/* Cap horizontal blowout at the document level so a long unbreakable
+   string (long channel/title in a 1-column mobile grid) can't introduce
+   a horizontal page scroll. Applied here rather than on <main> so we
+   don't accidentally turn <main> into a scroll container — that would
+   double-count main's padding-top inside the sticky player's offset on
+   the mobile WatchPage. */
+html, body {
+  overflow-x: hidden;
+}
+
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
                "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

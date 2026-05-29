@@ -60,12 +60,12 @@ export function Layout() {
         // hides under the fixed bar (or its iOS home-indicator inset).
         // Reset to 0 on xl where the bottom nav disappears.
         //
-        // ``overflow-x-hidden`` is a hard safety against horizontal scroll
-        // — a single unbroken channel/title string in a 1-column mobile
-        // grid was blowing the layout wide enough that the viewport got a
-        // horizontal scrollbar. We keep the visible content properly
-        // truncated where we can; this is the belt and braces.
-        className="ml-0 xl:ml-70 min-h-screen safe-bottom xl:pb-0 overflow-x-hidden"
+        // NOTE: do NOT put ``overflow-x: hidden`` here. Making <main> a
+        // scroll container double-counts the page's padding-top inside the
+        // sticky player's ``top: --header-safe-top`` offset, pushing the
+        // player a header-height down from where it should sit. The
+        // horizontal-blowout safety lives on <html> in index.css instead.
+        className="ml-0 xl:ml-70 min-h-screen safe-bottom xl:pb-0"
         style={{
           paddingBottom: "var(--bottom-nav-safe)",
           paddingTop: "var(--header-safe-top)",
