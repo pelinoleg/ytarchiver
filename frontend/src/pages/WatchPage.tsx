@@ -600,6 +600,7 @@ export function WatchPage() {
             order-3
             lg:order-none lg:row-start-1 lg:row-span-2 lg:col-start-2
             mt-6 lg:mt-0
+            lg:max-h-[calc(100vh-6rem-env(safe-area-inset-top))] lg:overflow-y-auto lg:pr-1
           "
         >
           {video.status === "done" && (
