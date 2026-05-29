@@ -359,6 +359,18 @@ function AdvancedSection({
       {open && (
         <div className="border-t border-zinc-800 divide-y divide-zinc-800">
           <Row
+            label="Параллельных загрузок"
+            hint="Сколько видео качать одновременно. 1 = по одному (мягче к YouTube, рекомендуется). 2-3 ускоряет разгрёб большого бэклога ценой риска бана за паттерн."
+          >
+            <NumberWithUnit
+              value={form.max_concurrent_downloads}
+              min={1} max={5} step={1}
+              onChange={(n) => update("max_concurrent_downloads", n)}
+              unit="одновременно"
+            />
+          </Row>
+
+          <Row
             label="Пауза между загрузками"
             hint="Случайная пауза между двумя последовательными скачиваниями. Защищает от бана за паттерн. Min ≤ max."
           >

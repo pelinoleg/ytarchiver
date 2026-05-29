@@ -23,6 +23,7 @@ class SettingsUpdate(BaseModel):
     max_videos_per_channel_scan: Optional[int] = None
     between_downloads_min_seconds: Optional[int] = None
     between_downloads_max_seconds: Optional[int] = None
+    max_concurrent_downloads: Optional[int] = None
     preview_width: Optional[int] = None
     preview_crf: Optional[int] = None
     preview_segments: Optional[int] = None
@@ -46,6 +47,7 @@ def _load_settings(db: DB) -> GlobalSettings:
         max_videos_per_channel_scan=env_settings.max_videos_per_channel_scan,
         between_downloads_min_seconds=env_settings.between_downloads_min_seconds,
         between_downloads_max_seconds=env_settings.between_downloads_max_seconds,
+        max_concurrent_downloads=env_settings.max_concurrent_downloads,
         preview_width=env_settings.preview_width,
         preview_crf=env_settings.preview_crf,
         preview_segments=env_settings.preview_segments,

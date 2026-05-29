@@ -9,6 +9,8 @@ from db.database import init_schema
 from routers import channels, videos, settings_router, stream, ws, queue, history, manual, favorites, events, stats, playlists, maintenance, music, storage, search, backup, folders, variants
 from services.scheduler import scheduler, configure_jobs
 from services.worker import worker
+from services.db_heal import ensure_healthy_db
+from services.backup_job import backup_database
 
 
 logging.basicConfig(
@@ -20,7 +22,17 @@ log = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Self-heal must run before init_schema — schema migrations would crash on a
+    # malformed file. ensure_healthy_db raises only when every recovery path
+    # failed, in which case we want startup to abort loudly.
+    ensure_healthy_db()
     init_schema()
+    # Take an immediate backup so the very first scheduled snapshot isn't 24h
+    # away on a freshly-started container. Best-effort, errors are logged.
+    try:
+        backup_database()
+    except Exception:
+        log.exception("startup backup failed (non-fatal)")
     configure_jobs()
     scheduler.start()
     await worker.start()
@@ -30,6 +42,12 @@ async def lifespan(app: FastAPI):
     finally:
         await worker.stop()
         scheduler.shutdown(wait=False)
+        # Final shutdown snapshot — defends against the unlucky "container
+        # restarted mid-WAL" path that triggered the 2026-05-29 corruption.
+        try:
+            backup_database()
+        except Exception:
+            log.exception("shutdown backup failed (non-fatal)")
 
 
 app = FastAPI(title="YT Archiver", lifespan=lifespan)

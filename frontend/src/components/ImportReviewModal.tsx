@@ -20,6 +20,12 @@ interface ChannelExport {
   sync_interval_minutes?: number | null;
   show_on_home?: boolean;
   latest_count?: number | null;
+  folder?: string | null;
+}
+
+interface FolderExport {
+  name: string;
+  position?: number;
 }
 
 interface PlaylistExport {
@@ -36,6 +42,7 @@ interface PlaylistExport {
 
 export interface ImportPayload {
   version?:  number;
+  folders?:   FolderExport[];
   channels?:  ChannelExport[];
   playlists?: PlaylistExport[];
   settings?:  Record<string, unknown>;
@@ -137,7 +144,10 @@ export function ImportReviewModal({
 
   const mut = useMutation({
     mutationFn: () => backupApi.importJson({
-      version:   1,
+      // v2 schema — embeds folder names per channel + a top-level folder list.
+      // Backend still accepts v1 (no folders, no folder field) for old exports.
+      version:   payload.version && payload.version >= 2 ? payload.version : 2,
+      folders:   payload.folders ?? [],
       channels:  [...chState.values()].filter((c) => c.checked).map(({ checked: _c, ...rest }) => rest),
       playlists: [...plState.values()].filter((p) => p.checked).map(({ checked: _c, ...rest }) => rest),
       settings:  applySettings ? (payload.settings ?? {}) : {},

@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     between_downloads_min_seconds: int = 5
     between_downloads_max_seconds: int = 15
 
+    # How many videos the worker may download in parallel. Default 1 to stay
+    # gentle on the upstream IP — bumping to 2-3 helps when you've subscribed
+    # to many high-volume channels and want the backlog to clear faster.
+    max_concurrent_downloads: int = 1
+
     # Hover-preview generation (ffmpeg).
     preview_width: int = 480
     preview_crf: int = 27

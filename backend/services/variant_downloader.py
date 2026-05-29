@@ -18,6 +18,7 @@ from config import settings
 from db.database import get_connection, DB
 from services.downloader import build_format_string
 from services.ytdlp_service import yt_opts_extra
+from services.worker import is_paused
 
 
 log = logging.getLogger(__name__)
@@ -38,6 +39,15 @@ def download_variant(*, video_id: str, channel_id: int, height: int) -> None:
             return
         if variant["status"] == "done" and Path(variant["file_path"]).exists():
             return  # already there
+
+        # Honor the global pause flag — leave the variant in 'pending' so the
+        # user can re-trigger from the UI after resuming.
+        if is_paused():
+            log.info("variant download deferred (downloads paused): %s @ %dp",
+                     video_id, height)
+            db.set_variant_status(variant["id"], "pending",
+                                  error_message="paused")
+            return
 
         db.set_variant_status(variant["id"], "downloading")
 

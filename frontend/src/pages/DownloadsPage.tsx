@@ -2,17 +2,30 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Inbox, Loader2, AlertTriangle, Clock, RefreshCw, X, Download,
-  Gauge, Hourglass,
+  Gauge, Hourglass, Pause, Play,
 } from "lucide-react";
 import { queueApi, videosApi, thumbUrl, type Video } from "../lib/api";
 import { formatBytes, formatDuration } from "../lib/format";
 import { useConfirm } from "../components/ConfirmProvider";
 
 export function DownloadsPage() {
+  const qc = useQueryClient();
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["queue"],
     queryFn: queueApi.list,
     refetchInterval: 3_000,
+  });
+  const { data: status } = useQuery({
+    queryKey: ["queue-status"],
+    queryFn: queueApi.status,
+    refetchInterval: 5_000,
+  });
+  const togglePause = useMutation({
+    mutationFn: () => (status?.paused ? queueApi.resume() : queueApi.pause()),
+    onSuccess: (next) => {
+      qc.setQueryData(["queue-status"], next);
+      qc.invalidateQueries({ queryKey: ["queue"] });
+    },
   });
 
   // Bucket by status — the queue API already returns them in this order,
@@ -35,6 +48,9 @@ export function DownloadsPage() {
         totalDl={totalDl}
         totalAll={totalAll}
         aggPct={aggPct}
+        paused={!!status?.paused}
+        onTogglePause={() => togglePause.mutate()}
+        togglePending={togglePause.isPending}
       />
 
       {isLoading ? (
@@ -91,6 +107,7 @@ export function DownloadsPage() {
 
 function Hero({
   active, waiting, failed, totalDl, totalAll, aggPct,
+  paused, onTogglePause, togglePending,
 }: {
   active: number;
   waiting: number;
@@ -98,24 +115,54 @@ function Hero({
   totalDl: number;
   totalAll: number;
   aggPct: number;
+  paused: boolean;
+  onTogglePause: () => void;
+  togglePending: boolean;
 }) {
   const anyActive = active + waiting + failed > 0;
   return (
     <header className="relative mb-8 overflow-hidden rounded-3xl ring-1 ring-zinc-800 shadow-lg shadow-black/40">
       <div className="absolute inset-0 bg-gradient-to-br from-red-900/35 via-zinc-900 to-zinc-950" />
       {/* Thin red glow along the top edge while anything is in flight. */}
-      {active > 0 && (
+      {active > 0 && !paused && (
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-red-500/15 to-transparent" />
       )}
 
       <div className="relative px-6 py-7 sm:px-9 sm:py-9">
-        <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-red-200">
-          <Download className="h-4 w-4" />
-          Downloads
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-red-200">
+              <Download className="h-4 w-4" />
+              Downloads
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white drop-shadow-sm">
+              Очередь
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={onTogglePause}
+            disabled={togglePending}
+            className={
+              "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold ring-1 transition " +
+              (paused
+                ? "bg-emerald-500/15 text-emerald-200 ring-emerald-500/30 hover:bg-emerald-500/25"
+                : "bg-zinc-800/80 text-zinc-100 ring-zinc-700 hover:bg-zinc-700") +
+              (togglePending ? " opacity-60" : "")
+            }
+            title={paused ? "Возобновить все загрузки" : "Поставить все загрузки на паузу"}
+          >
+            {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+            {paused ? "Возобновить" : "Пауза"}
+          </button>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white drop-shadow-sm">
-          Очередь
-        </h1>
+
+        {paused && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-200 ring-1 ring-amber-500/30">
+            <Pause className="h-3.5 w-3.5" />
+            Загрузки на паузе — текущая докачается, новые не стартуют
+          </div>
+        )}
 
         {anyActive ? (
           <p className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-zinc-200/90">

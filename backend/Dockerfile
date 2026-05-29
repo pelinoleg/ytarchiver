@@ -4,7 +4,7 @@ FROM python:3.12-slim
 # preview / thumbnail conversion). curl is kept tiny and used by the
 # healthcheck so we don't need to push httpx into the image just for that.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl sqlite3 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

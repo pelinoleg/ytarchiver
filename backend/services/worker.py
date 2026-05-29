@@ -1,4 +1,11 @@
-"""Async download worker — picks pending videos and runs yt-dlp via executor."""
+"""Async download worker — picks pending videos and runs yt-dlp via executor.
+
+Supports configurable parallelism (``max_concurrent_downloads`` setting) and a
+global pause flag (``downloads_paused``). The coordinator loop atomically claims
+the next pending video by flipping its status to ``downloading`` in a single
+``BEGIN IMMEDIATE`` transaction, so multiple in-flight tasks never race on the
+same row.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -18,6 +25,7 @@ log = logging.getLogger(__name__)
 IDLE_POLL_SECONDS = 5
 BETWEEN_DOWNLOADS_MIN = 5     # politeness buffer to YT — overridable via settings
 BETWEEN_DOWNLOADS_MAX = 15
+PAUSE_POLL_SECONDS = 5
 
 # Transient yt-dlp / network failures auto-retry up to this many times before
 # the video is moved to status='error' for the user to deal with.
@@ -47,9 +55,45 @@ TRANSIENT_ERROR_MARKERS = (
 )
 
 
+# Settings keys used by the worker — exposed so other modules (routers, the
+# variant downloader) can read the same flags without re-hard-coding strings.
+PAUSED_KEY = "downloads_paused"
+MAX_CONCURRENT_KEY = "max_concurrent_downloads"
+
+
+def is_paused() -> bool:
+    """Read the pause flag straight from the settings KV table.
+    Cheap — no caching — the call site is already in a polling loop."""
+    raw = _kv_get(PAUSED_KEY)
+    if raw is None:
+        return False
+    return str(raw).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _kv_get(key: str) -> str | None:
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT value FROM settings WHERE key = ?", (key,),
+        ).fetchone()
+        return row["value"] if row else None
+    finally:
+        conn.close()
+
+
+def _kv_int(key: str, default: int) -> int:
+    raw = _kv_get(key)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
 class DownloadWorker:
     def __init__(self) -> None:
-        self._task: Optional[asyncio.Task] = None
+        self._coordinator: Optional[asyncio.Task] = None
         self._running = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         # Last DB-write time per video, used to throttle progress persistence.
@@ -57,54 +101,120 @@ class DownloadWorker:
         # In-memory transient-retry counters. Reset on process restart, which
         # is fine — at worst the user sees one extra retry after a reboot.
         self._retries: dict[str, int] = {}
+        # Active download tasks. Coordinator gates new spawns by len().
+        self._in_flight: set[asyncio.Task] = set()
 
     async def start(self) -> None:
-        if self._task:
+        if self._coordinator:
             return
         self._loop = asyncio.get_running_loop()
         progress.set_loop(self._loop)
         self._running = True
-        self._task = asyncio.create_task(self._loop_forever(), name="download-worker")
+        self._coordinator = asyncio.create_task(
+            self._coordinator_loop(), name="download-coordinator",
+        )
         log.info("download worker started")
 
     async def stop(self) -> None:
         self._running = False
-        if self._task:
-            self._task.cancel()
+        if self._coordinator:
+            self._coordinator.cancel()
             try:
-                await self._task
+                await self._coordinator
             except (asyncio.CancelledError, Exception):
                 pass
+        # Cancel any in-flight downloads so shutdown doesn't hang on a slow yt-dlp.
+        for t in list(self._in_flight):
+            t.cancel()
         log.info("download worker stopped")
 
-    async def _loop_forever(self) -> None:
+    async def _coordinator_loop(self) -> None:
+        """Spawn download tasks up to ``max_concurrent_downloads`` and tend the pool.
+
+        Re-reads the limit and pause flag every tick so changes via /api/settings
+        and /api/queue/pause take effect within a few seconds without restart.
+        """
         while self._running:
             try:
-                video = self._next_pending()
-                if not video:
-                    await asyncio.sleep(IDLE_POLL_SECONDS)
+                # Drop completed tasks from the bookkeeping set.
+                done = {t for t in self._in_flight if t.done()}
+                self._in_flight -= done
+
+                if is_paused():
+                    await asyncio.sleep(PAUSE_POLL_SECONDS)
                     continue
-                await self._process(video)
-                lo = self._kv_int("between_downloads_min_seconds", BETWEEN_DOWNLOADS_MIN)
-                hi = self._kv_int("between_downloads_max_seconds", BETWEEN_DOWNLOADS_MAX)
-                if hi < lo: hi = lo
-                await asyncio.sleep(random.uniform(lo, hi))
+
+                limit = max(1, _kv_int(MAX_CONCURRENT_KEY, settings.max_concurrent_downloads))
+                while len(self._in_flight) < limit:
+                    video = self._claim_next_pending()
+                    if not video:
+                        break
+                    task = asyncio.create_task(
+                        self._process_and_pause(video),
+                        name=f"download-{video['video_id']}",
+                    )
+                    self._in_flight.add(task)
+
+                await asyncio.sleep(IDLE_POLL_SECONDS if not self._in_flight else 1)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                log.exception("worker tick crashed")
+                log.exception("coordinator tick crashed")
                 await asyncio.sleep(10)
 
-    def _next_pending(self) -> dict | None:
-        conn = get_connection()
+    async def _process_and_pause(self, video: dict) -> None:
+        """Run one download then apply the politeness sleep. Errors in
+        ``_process`` are already swallowed there; this wrapper just protects
+        the coordinator from a runaway exception bubbling up via the task set."""
         try:
+            await self._process(video)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("worker tick crashed")
+        lo = _kv_int("between_downloads_min_seconds", BETWEEN_DOWNLOADS_MIN)
+        hi = _kv_int("between_downloads_max_seconds", BETWEEN_DOWNLOADS_MAX)
+        if hi < lo:
+            hi = lo
+        await asyncio.sleep(random.uniform(lo, hi))
+
+    def _claim_next_pending(self) -> dict | None:
+        """Atomically pick the oldest pending video and flip it to ``downloading``.
+
+        Uses ``BEGIN IMMEDIATE`` so a second coordinator (or a retry triggered
+        from elsewhere) can't grab the same row. Returns None if the queue is
+        empty or paused.
+        """
+        if is_paused():
+            return None
+        conn = get_connection()
+        # Manage the transaction ourselves — sqlite3's implicit commit mode would
+        # auto-open a DEFERRED tx on SELECT, which doesn't lock writers out.
+        conn.isolation_level = None
+        try:
+            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
                 "SELECT v.*, c.quality AS channel_quality, c.name AS channel_name "
                 "FROM videos v JOIN channels c ON c.id = v.channel_id "
                 "WHERE v.status = 'pending' AND v.is_short = 0 "
                 "ORDER BY v.added_at LIMIT 1"
             ).fetchone()
-            return dict(row) if row else None
+            if not row:
+                conn.execute("COMMIT")
+                return None
+            conn.execute(
+                "UPDATE videos SET status = 'downloading', error_message = NULL, progress = NULL "
+                "WHERE video_id = ?",
+                (row["video_id"],),
+            )
+            conn.execute("COMMIT")
+            return dict(row)
+        except Exception:
+            try:
+                conn.execute("ROLLBACK")
+            except Exception:
+                pass
+            raise
         finally:
             conn.close()
 
@@ -112,7 +222,6 @@ class DownloadWorker:
         video_id = video["video_id"]
         quality = self._resolve_quality(video)
 
-        self._set_status(video_id, "downloading", progress=None, error_message=None)
         self._last_progress_write.pop(video_id, None)
         await progress.broadcast({"video_id": video_id, "status": "downloading"})
 
@@ -278,20 +387,6 @@ class DownloadWorker:
             DB(conn).set_video_status(video_id, status, **fields)
         finally:
             conn.close()
-
-    @staticmethod
-    def _kv_int(key: str, default: int) -> int:
-        conn = get_connection()
-        try:
-            raw = DB(conn).get_settings().get(key)
-        finally:
-            conn.close()
-        if raw is None:
-            return default
-        try:
-            return int(raw)
-        except (TypeError, ValueError):
-            return default
 
     @staticmethod
     def _log_event(type_: str, **kwargs) -> None:

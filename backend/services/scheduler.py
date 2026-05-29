@@ -15,6 +15,7 @@ from services import (
     subtitles_index,
     integrity,
     error_retry,
+    backup_job,
 )
 
 
@@ -162,6 +163,18 @@ def configure_jobs() -> None:
         replace_existing=True,
         max_instances=1,
         coalesce=True,
+    )
+    # Daily hot-backup of the SQLite DB. Uses the online-backup API so it
+    # runs safely while the worker writes. Pairs with services.db_heal which
+    # auto-restores from these snapshots on a malformed-DB startup.
+    scheduler.add_job(
+        backup_job.backup_database,
+        trigger=IntervalTrigger(days=1, jitter=900),
+        id="db-backup",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        next_run_time=None,
     )
     log.info(
         "scheduler: sync every %d min (+/- %d) · sponsorblock 24h · cleanup 24h · yt-dlp update 7d",

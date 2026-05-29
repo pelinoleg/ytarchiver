@@ -131,6 +131,7 @@ class GlobalSettings(BaseModel):
     # Advanced knobs.
     between_downloads_min_seconds: int = 5
     between_downloads_max_seconds: int = 15
+    max_concurrent_downloads: int = 1
     preview_width: int = 480
     preview_crf: int = 27
     preview_segments: int = 12

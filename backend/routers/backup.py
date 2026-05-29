@@ -1,6 +1,11 @@
-"""Export / import — JSON dump of subscriptions, playlists, and settings.
-No videos, no history — those are recoverable by re-running sync. Idempotent
-on import: existing URLs are skipped, only new ones get added.
+"""Export / import — JSON dump of subscriptions, playlists, folders, settings.
+
+No videos and no history — those are recoverable by re-running sync. Idempotent
+on import: existing URLs / folder names are skipped, only new ones get added.
+
+Version 2 added ``folders`` (the channel folder list itself) and embeds the
+folder name on each channel so re-imports preserve grouping. Version 1 imports
+are still accepted — they just have no folder info to apply.
 """
 from __future__ import annotations
 
@@ -21,12 +26,16 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 
 
+EXPORT_VERSION = 2
+
+
 # ── Export ──────────────────────────────────────────────────────────────────────
 
 
-def _channel_export(row) -> dict:
+def _channel_export(row, folder_name_by_id: dict[int, str]) -> dict:
     """Include user-facing metadata (name, thumbnail) so the importer can
     render a nice review modal without having to re-fetch every channel."""
+    folder = folder_name_by_id.get(row["folder_id"]) if row["folder_id"] else None
     return {
         "url":                   row["url"],
         "name":                  row["name"],
@@ -39,6 +48,7 @@ def _channel_export(row) -> dict:
         "show_on_home":          bool(row["show_on_home"]),
         "latest_count":          row["latest_count"],
         "download_from_date":    row["download_from_date"],
+        "folder":                folder,
     }
 
 
@@ -56,17 +66,29 @@ def _playlist_export(row) -> dict:
     }
 
 
+def _folder_export(row) -> dict:
+    return {
+        "name":     row["name"],
+        "position": row["position"],
+    }
+
+
 @router.get("/export")
 def export_all(db: DB = Depends(get_db)):
-    channels  = [_channel_export(r)  for r in db.list_channels()]
-    playlists = [_playlist_export(r) for r in db.conn.execute("SELECT * FROM playlists ORDER BY id").fetchall()]
+    folders = list(db.list_channel_folders())
+    folder_name_by_id = {r["id"]: r["name"] for r in folders}
+    channels  = [_channel_export(r, folder_name_by_id) for r in db.list_channels()]
+    playlists = [_playlist_export(r) for r in db.conn.execute(
+        "SELECT * FROM playlists ORDER BY id"
+    ).fetchall()]
     settings_kv = db.get_settings()
     payload = {
-        "version":    1,
+        "version":     EXPORT_VERSION,
         "exported_at": datetime.utcnow().isoformat() + "Z",
-        "channels":   channels,
-        "playlists":  playlists,
-        "settings":   settings_kv,
+        "folders":     [_folder_export(r) for r in folders],
+        "channels":    channels,
+        "playlists":   playlists,
+        "settings":    settings_kv,
     }
     # Force the browser to download instead of preview.
     return JSONResponse(
@@ -82,12 +104,15 @@ def export_all(db: DB = Depends(get_db)):
 
 class ImportBody(BaseModel):
     version:   int = 1
+    folders:   list[dict[str, Any]] = []
     channels:  list[dict[str, Any]] = []
     playlists: list[dict[str, Any]] = []
     settings:  dict[str, Any] = {}
 
 
 class ImportReport(BaseModel):
+    folders_added:     int = 0
+    folders_skipped:   int = 0
     channels_added:    int = 0
     channels_skipped:  int = 0
     playlists_added:   int = 0
@@ -98,12 +123,34 @@ class ImportReport(BaseModel):
 
 @router.post("/import", response_model=ImportReport)
 def import_all(body: ImportBody, bg: BackgroundTasks, db: DB = Depends(get_db)):
-    if body.version != 1:
+    if body.version not in (1, 2):
         raise HTTPException(400, f"Unsupported backup version: {body.version}")
     report = ImportReport()
 
-    # Channels — re-subscribe via the regular sync helper (which resolves the
-    # channel id from URL, creates the row, and queues a first-sync run).
+    # 1. Folders — create the missing ones up-front so channels can reference
+    #    them by name. NOCASE-compare against existing folders to avoid the
+    #    classic "Music" vs "music" duplicate.
+    existing_folders = {r["name"].casefold(): r["id"] for r in db.list_channel_folders()}
+    folder_id_by_name: dict[str, int] = dict(
+        (r["name"].casefold(), r["id"]) for r in db.list_channel_folders()
+    )
+    for f in body.folders or []:
+        name = (f.get("name") or "").strip()
+        if not name:
+            continue
+        if name.casefold() in existing_folders:
+            report.folders_skipped += 1
+            folder_id_by_name[name.casefold()] = existing_folders[name.casefold()]
+            continue
+        try:
+            fid = db.add_channel_folder(name, int(f.get("position") or 0))
+            folder_id_by_name[name.casefold()] = fid
+            report.folders_added += 1
+        except Exception as e:
+            report.errors.append(f"folder {name}: {e}")
+
+    # 2. Channels — re-subscribe via the regular sync helper (which resolves the
+    #    channel id from URL, creates the row, and queues a first-sync run).
     existing_ch = {r["url"] for r in db.list_channels()}
     for c in body.channels:
         url = c.get("url")
@@ -111,6 +158,10 @@ def import_all(body: ImportBody, bg: BackgroundTasks, db: DB = Depends(get_db)):
             report.channels_skipped += 1
             continue
         try:
+            folder_id = None
+            folder_name = (c.get("folder") or "").strip()
+            if folder_name:
+                folder_id = folder_id_by_name.get(folder_name.casefold())
             cid = sync.subscribe_channel(
                 db,
                 url=url,
@@ -120,13 +171,14 @@ def import_all(body: ImportBody, bg: BackgroundTasks, db: DB = Depends(get_db)):
                 sync_interval_minutes=c.get("sync_interval_minutes"),
                 show_on_home=bool(c.get("show_on_home", True)),
                 latest_count=c.get("latest_count"),
+                folder_id=folder_id,
             )
             report.channels_added += 1
             bg.add_task(_channel_sync_bg, cid)
         except Exception as e:
             report.errors.append(f"channel {url}: {e}")
 
-    # Playlists.
+    # 3. Playlists.
     existing_pl = {
         r["url"] for r in db.conn.execute("SELECT url FROM playlists").fetchall()
     }
@@ -151,8 +203,8 @@ def import_all(body: ImportBody, bg: BackgroundTasks, db: DB = Depends(get_db)):
         except Exception as e:
             report.errors.append(f"playlist {url}: {e}")
 
-    # Settings — KV merge. Lists stored as comma-joined strings (matches what
-    # the settings router already does for ``sponsorblock_categories``).
+    # 4. Settings — KV merge. Lists stored as comma-joined strings (matches what
+    #    the settings router already does for ``sponsorblock_categories``).
     flattened: dict[str, str] = {}
     for k, v in (body.settings or {}).items():
         if v is None:

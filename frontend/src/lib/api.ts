@@ -92,6 +92,7 @@ export interface GlobalSettings {
   max_videos_per_channel_scan: number;
   between_downloads_min_seconds: number;
   between_downloads_max_seconds: number;
+  max_concurrent_downloads: number;
   preview_width: number;
   preview_crf: number;
   preview_segments: number;
@@ -392,6 +393,8 @@ export const settingsApi = {
 };
 
 export interface ImportReport {
+  folders_added?: number;
+  folders_skipped?: number;
   channels_added: number;
   channels_skipped: number;
   playlists_added: number;
@@ -421,6 +424,7 @@ export const backupApi = {
   exportJson: () => request<{
     version: number;
     exported_at: string;
+    folders?: Array<Record<string, unknown>>;
     channels: Array<Record<string, unknown>>;
     playlists: Array<Record<string, unknown>>;
     settings: Record<string, unknown>;
@@ -433,9 +437,20 @@ export const backupApi = {
     { method: "POST", body: JSON.stringify({ url, kind: "playlist" }) }),
 };
 
+export interface QueueStatus {
+  paused: boolean;
+  pending: number;
+  downloading: number;
+  error: number;
+  max_concurrent: number;
+}
+
 export const queueApi = {
-  list:  () => request<Video[]>("/api/queue"),
-  retry: (videoId: string) => request<Video>(`/api/queue/${videoId}/retry`, { method: "POST" }),
+  list:    () => request<Video[]>("/api/queue"),
+  status:  () => request<QueueStatus>("/api/queue/status"),
+  pause:   () => request<QueueStatus>("/api/queue/pause", { method: "POST" }),
+  resume:  () => request<QueueStatus>("/api/queue/resume", { method: "POST" }),
+  retry:   (videoId: string) => request<Video>(`/api/queue/${videoId}/retry`, { method: "POST" }),
 };
 
 export interface SponsorSegment {
