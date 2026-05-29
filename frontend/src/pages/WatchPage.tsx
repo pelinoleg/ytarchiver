@@ -354,17 +354,17 @@ export function WatchPage() {
 
   return (
     <div>
-      {/* Layout: a single grid that wraps player + meta + aside, so the
-       *  player's ``position: sticky`` stays anchored to the WHOLE page on
-       *  phones — not just the meta column. That keeps the video on screen
-       *  while the user scrolls down through related videos or the playlist
-       *  queue (the original layout lost the anchor as soon as the meta
-       *  column scrolled off).
+      {/* Layout: two-column flex on lg+, plain stack on phone.
        *
-       *  DOM order is Player → Meta → Aside, which is the phone view. On
-       *  ``lg`` we use explicit row/col placement so Aside floats next to
-       *  Player on the right and Meta sits underneath Player on the left. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-x-6">
+       *  Main column (player + meta) is its own block, so meta sits
+       *  immediately under the player at the player's actual rendered
+       *  height — no grid row-span dance dragging it down when aside is
+       *  taller than the player. Aside is a fixed-width sibling with its
+       *  own viewport-bound scroll container for the music queue / related
+       *  list, independent of the page scroll. */}
+      <div className="lg:flex lg:gap-x-6 lg:items-start">
+        {/* Main column: player + meta stacked */}
+        <div className="lg:flex-1 lg:min-w-0">
         {/* Player */}
         <div
           // ``bg-black`` is only for the mobile edge-to-edge case (the
@@ -379,7 +379,7 @@ export function WatchPage() {
           // positioned overlays (MediaErrorOverlay, EndScreen) anchored.
           // ``lg:!top-auto`` neutralizes the sticky offset so the player
           // doesn't shift down on desktop.
-          className="order-1 lg:row-start-1 lg:col-start-1 sticky lg:relative lg:!top-auto z-30 bg-black sm:bg-transparent -mx-4 sm:mx-0 relative"
+          className="sticky lg:relative lg:!top-auto z-30 bg-black sm:bg-transparent -mx-4 sm:mx-0 relative"
           style={{ top: "var(--header-safe-top)" }}
         >
           {mediaError && video.status === "done" && (
@@ -493,7 +493,7 @@ export function WatchPage() {
         </div>
 
         {/* Meta + chapters + description (only for ``done`` videos) */}
-        <div className="order-2 lg:row-start-2 lg:col-start-1 min-w-0 mt-3 lg:mt-4">
+        <div className="min-w-0 mt-3 lg:mt-4">
           {video.status === "done" && (
             <>
               {(isMusicSource || playlistId) && (
@@ -588,18 +588,18 @@ export function WatchPage() {
           )}
         </div>
 
+        </div>
+        {/* /Main column */}
+
         {/* Aside — related / playlist queue / music queue.
          *
-         *  Bottom padding when the MusicControlBar is showing so the user
-         *  doesn't scroll content under the always-visible strip. The bar
-         *  itself is rendered outside the grid (fixed position) further
-         *  down so it spans full viewport width on tablet+. */}
-        {/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */}
+         *  Fixed 320px width on lg+; viewport-bound scroll container so the
+         *  queue (100+ items) doesn't extend the page. On phone it's a
+         *  regular block below the meta column. */}
         <aside
           className="
-            order-3
-            lg:order-none lg:row-start-1 lg:row-span-2 lg:col-start-2
             mt-6 lg:mt-0
+            lg:w-80 lg:flex-shrink-0
             lg:max-h-[calc(100vh-6rem-env(safe-area-inset-top))] lg:overflow-y-auto lg:pr-1
           "
         >
