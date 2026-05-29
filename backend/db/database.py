@@ -285,14 +285,16 @@ class DB:
             f"       (SELECT COUNT(*) FROM videos v "
             f"        WHERE v.channel_id = c.id AND v.is_short = 0 "
             f"          AND v.status = 'done' AND {NOT_MUSIC_SQL}) AS video_count, "
-            # "Recent" — downloaded within the last 24h. Powers the red
-            # sidebar badge. Watched-or-not is intentionally not part of
-            # the predicate: the badge is a time-window indicator, it
-            # disappears on its own after 24h.
+            # "Recent" — YouTube upload timestamp within the last 24h.
+            # Powers the red sidebar badge. Uses upload_timestamp (epoch
+            # seconds, from yt-dlp) rather than downloaded_at so backfills
+            # of an old channel don't flash a red dot for week-old uploads
+            # just because we grabbed them today.
             f"       (SELECT COUNT(*) FROM videos v "
             f"        WHERE v.channel_id = c.id AND v.is_short = 0 "
             f"          AND v.status = 'done' AND {NOT_MUSIC_SQL} "
-            f"          AND v.downloaded_at >= datetime('now', '-1 day')"
+            f"          AND v.upload_timestamp IS NOT NULL "
+            f"          AND v.upload_timestamp >= CAST(strftime('%s','now','-1 day') AS INTEGER)"
             f"       ) AS recent_count "
             f"FROM channels c "
             f"WHERE (c.yt_channel_id IS NOT ?) AND c.is_subscribed = 1 "

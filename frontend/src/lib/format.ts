@@ -164,18 +164,25 @@ function pluralDays(n: number): string {
   return "дней";
 }
 
-/** "Recent" = downloaded within the last 24h. Watched-or-not does not
- *  matter — the badge is purely a "just landed on the site" indicator,
- *  it disappears on its own when the row is a day old. */
+/** "Recent" = uploaded to YouTube within the last 24h. Uses
+ *  upload_timestamp (epoch seconds from yt-dlp) so a back-fill of an old
+ *  channel doesn't paint week-old videos as fresh just because we just
+ *  downloaded them. Falls back to upload_date (YYYYMMDD) when the
+ *  timestamp hasn't been backfilled yet. */
 export function isRecent(video: {
-  downloaded_at?: string | null;
+  upload_timestamp?: number | null;
+  upload_date?: string | null;
 }): boolean {
-  if (!video.downloaded_at) return false;
-  const raw = video.downloaded_at;
-  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
-  const dt = new Date(normalized + (normalized.endsWith("Z") ? "" : "Z"));
+  const dayMs = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  if (typeof video.upload_timestamp === "number" && video.upload_timestamp > 0) {
+    return now - video.upload_timestamp * 1000 < dayMs;
+  }
+  const d = video.upload_date;
+  if (!d || d.length !== 8) return false;
+  const dt = new Date(`${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T00:00:00Z`);
   if (isNaN(dt.getTime())) return false;
-  return Date.now() - dt.getTime() < 24 * 60 * 60 * 1000;
+  return now - dt.getTime() < dayMs;
 }
 
 /** Parse the backend's naive-UTC ISO/date string into a Date. */

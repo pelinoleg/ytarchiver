@@ -60,9 +60,13 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
   const downloading = queue.find((v) => v.status === "downloading");
   const downloadingPct = parsePct(downloading?.progress);
 
-  // If we're watching a video, highlight that video's channel even though
-  // the URL doesn't match /channel/:id.
+  // Active channel = the one whose page or video the user is currently
+  // looking at. Used to (a) highlight the channel row and (b) auto-expand
+  // its parent folder. We resolve from two URL shapes: /channel/:id and
+  // /watch/:videoId (where the channel is looked up via the video row).
   const location = useLocation();
+  const channelMatch = location.pathname.match(/^\/channel\/(\d+)/);
+  const channelPageId = channelMatch ? Number(channelMatch[1]) : null;
   const watchMatch = location.pathname.match(/^\/watch\/([^/?#]+)/);
   const watchVideoId = watchMatch?.[1];
   const { data: watchedVideo } = useQuery({
@@ -70,7 +74,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     queryFn: () => videosApi.get(watchVideoId!),
     enabled: !!watchVideoId,
   });
-  const activeWatchChannelId = watchedVideo?.channel_id ?? null;
+  const activeWatchChannelId = channelPageId ?? watchedVideo?.channel_id ?? null;
 
   const { data: stats } = useQuery({
     queryKey: ["stats"],
