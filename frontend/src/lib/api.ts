@@ -24,7 +24,7 @@ export interface Channel {
   last_sync_added_count: number | null;
   last_sync_error: string | null;
   video_count: number;
-  unwatched_new_count: number;
+  recent_count: number;
   created_at: string | null;
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Clock, Loader2, AlertTriangle, Pin, CheckCircle2 } from "lucide-react";
 import { previewUrl, thumbUrl, type Video } from "../lib/api";
-import { formatDuration, formatUploadDate, formatBytes, isFreshUnwatched } from "../lib/format";
+import { formatDuration, formatUploadDate, formatBytes, isRecent } from "../lib/format";
 import { WatchProgress } from "./WatchProgress";
 import { VideoCardMenu } from "./VideoCardMenu";
 import { useSelection } from "./SelectionProvider";
@@ -152,7 +152,7 @@ export function VideoCard({ video }: { video: Video }) {
           ) : null}
         </div>
 
-        {isFreshUnwatched(video) && (
+        {isRecent(video) && (
           <span
             className="absolute top-1 right-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow"
             title="Downloaded recently, not watched yet"

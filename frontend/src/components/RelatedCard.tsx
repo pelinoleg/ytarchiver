@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Pin } from "lucide-react";
 import type { Video } from "../lib/api";
 import { thumbUrl } from "../lib/api";
-import { formatDuration, formatUploadDate, isFreshUnwatched } from "../lib/format";
+import { formatDuration, formatUploadDate, isRecent } from "../lib/format";
 import { WatchProgress } from "./WatchProgress";
 
 export function RelatedCard({ video }: { video: Video }) {
@@ -27,7 +27,7 @@ export function RelatedCard({ video }: { video: Video }) {
             {formatDuration(video.duration)}
           </span>
         ) : null}
-        {isFreshUnwatched(video) && (
+        {isRecent(video) && (
           <span
             className="absolute top-1 right-1 rounded bg-red-600 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white"
             title="Downloaded recently, not watched yet"

@@ -4,7 +4,7 @@ import { Tv, History as HistoryIcon, ChevronDown, ChevronUp } from "lucide-react
 import { channelsApi, historyApi, videosApi, thumbUrl, type Channel, type Video } from "../lib/api";
 import { VideoGrid } from "../components/VideoGrid";
 import { VideoCard } from "../components/VideoCard";
-import { formatDuration, isFreshUnwatched } from "../lib/format";
+import { formatDuration, isRecent } from "../lib/format";
 import { WatchProgress } from "../components/WatchProgress";
 import { useLocalStorageString } from "../hooks/useLocalStorageString";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
@@ -277,7 +277,7 @@ function ByChannel({ videos, channels }: { videos: Video[]; channels: Channel[] 
       name:   ch?.name           ?? sorted[0]?.channel_name      ?? "Unknown channel",
       avatar: ch?.thumbnail_url  ?? sorted[0]?.channel_thumbnail ?? null,
       videos: sorted,
-      hasNew: sorted.some(isFreshUnwatched),
+      hasNew: sorted.some(isRecent),
       newestDate: sorted[0]?.upload_date ?? "",
     };
   });

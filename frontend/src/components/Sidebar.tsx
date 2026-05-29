@@ -394,7 +394,7 @@ function DownloadsLink({
 }
 
 function ChannelLink({ channel, forceActive }: { channel: Channel; forceActive?: boolean }) {
-  const hasNew = (channel.unwatched_new_count ?? 0) > 0;
+  const hasNew = (channel.recent_count ?? 0) > 0;
   return (
     <NavLink
       to={`/channel/${channel.id}`}
@@ -419,7 +419,7 @@ function ChannelLink({ channel, forceActive }: { channel: Channel; forceActive?:
         <CountChip
           n={channel.video_count}
           dot={hasNew}
-          dotTitle={`${channel.unwatched_new_count} new · not yet watched`}
+          dotTitle={`${channel.recent_count} downloaded in the last 24h`}
         />
       )}
     </NavLink>

@@ -164,12 +164,12 @@ function pluralDays(n: number): string {
   return "дней";
 }
 
-/** "Fresh" = downloaded within the last 24h and never watched. */
-export function isFreshUnwatched(video: {
+/** "Recent" = downloaded within the last 24h. Watched-or-not does not
+ *  matter — the badge is purely a "just landed on the site" indicator,
+ *  it disappears on its own when the row is a day old. */
+export function isRecent(video: {
   downloaded_at?: string | null;
-  last_watched_at?: string | null;
 }): boolean {
-  if (video.last_watched_at) return false;
   if (!video.downloaded_at) return false;
   const raw = video.downloaded_at;
   const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");

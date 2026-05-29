@@ -285,14 +285,15 @@ class DB:
             f"       (SELECT COUNT(*) FROM videos v "
             f"        WHERE v.channel_id = c.id AND v.is_short = 0 "
             f"          AND v.status = 'done' AND {NOT_MUSIC_SQL}) AS video_count, "
-            # "Fresh & unwatched" — recently downloaded and the user hasn't
-            # started watching. Powers the red badge in the sidebar.
+            # "Recent" — downloaded within the last 24h. Powers the red
+            # sidebar badge. Watched-or-not is intentionally not part of
+            # the predicate: the badge is a time-window indicator, it
+            # disappears on its own after 24h.
             f"       (SELECT COUNT(*) FROM videos v "
             f"        WHERE v.channel_id = c.id AND v.is_short = 0 "
             f"          AND v.status = 'done' AND {NOT_MUSIC_SQL} "
-            f"          AND v.last_watched_at IS NULL "
-            f"          AND v.downloaded_at >= datetime('now', '-30 days')"
-            f"       ) AS unwatched_new_count "
+            f"          AND v.downloaded_at >= datetime('now', '-1 day')"
+            f"       ) AS recent_count "
             f"FROM channels c "
             f"WHERE (c.yt_channel_id IS NOT ?) AND c.is_subscribed = 1 "
             f"ORDER BY video_count DESC, c.name COLLATE NOCASE ASC",
