@@ -59,7 +59,13 @@ export function Layout() {
         // Padding-bottom = ``--bottom-nav-safe`` so content scroll never
         // hides under the fixed bar (or its iOS home-indicator inset).
         // Reset to 0 on xl where the bottom nav disappears.
-        className="ml-0 xl:ml-70 min-h-screen safe-bottom xl:pb-0"
+        //
+        // ``overflow-x-hidden`` is a hard safety against horizontal scroll
+        // — a single unbroken channel/title string in a 1-column mobile
+        // grid was blowing the layout wide enough that the viewport got a
+        // horizontal scrollbar. We keep the visible content properly
+        // truncated where we can; this is the belt and braces.
+        className="ml-0 xl:ml-70 min-h-screen safe-bottom xl:pb-0 overflow-x-hidden"
         style={{
           paddingBottom: "var(--bottom-nav-safe)",
           paddingTop: "var(--header-safe-top)",

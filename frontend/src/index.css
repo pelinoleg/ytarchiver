@@ -64,3 +64,9 @@ body {
   -ms-overflow-style: none;       /* old IE/Edge */
 }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Global scrollbar hide. Scrolling still works (wheel, drag, keys, touch);
+   only the visible track/thumb chrome is suppressed. Cleaner look across
+   the app; matches the YouTube-style aesthetic the user prefers. */
+*           { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { width: 0; height: 0; display: none; }
