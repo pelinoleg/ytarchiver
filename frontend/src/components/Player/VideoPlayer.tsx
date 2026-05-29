@@ -1073,10 +1073,18 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   return (
     <div
       ref={containerRef}
+      // YouTube-style framing: a fixed 16:9 container hosts the actual
+      // <video> via object-contain. Square / vertical / 4:3 sources get
+      // pillarboxed instead of letting their natural aspect grow the page.
+      //
+      // The height cap is 70vh, and the matching width cap (calc(70vh * 16/9))
+      // keeps the container itself 16:9 even when the height cap kicks in on
+      // wide / ultra-wide displays — otherwise the container would stay full
+      // column width with thick black bars on the sides.
       className={`custom-player relative overflow-hidden bg-black select-none ${
         isFs
           ? "fixed inset-0 flex items-center justify-center rounded-none"
-          : "rounded-none sm:rounded-xl"
+          : "aspect-video w-full max-h-[70vh] max-w-[calc(70vh*16/9)] mx-auto rounded-none sm:rounded-xl"
       }`}
       onMouseMove={bumpCtl}
       onMouseLeave={() => { if (isPlaying && !alwaysShowControls) setShowCtl(false); }}
@@ -1115,25 +1123,19 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
             }
             togglePlay();
           }}
-          // Apply aspect-ratio inline so it adapts to the actual stream
-          // dimensions discovered in onLoaded. Border-radius must live on
-          // the <video> element directly — Safari/Chrome are inconsistent
-          // about clipping the video to a parent's rounded overflow:
-          // hidden, leaving black triangles in the corners.
+          // Border-radius lives on the <video> element directly — Safari/
+          // Chrome are inconsistent about clipping a child video to a parent
+          // rounded overflow:hidden, leaving black triangles in the corners.
           //
           // ``touch-none`` lets the swipe gestures own all touch events.
           //
-          // ``sm:max-h-[78vh]`` caps how tall the player gets on landscape
-          // phones / tablets / desktop. Without it, a square or vertical
-          // source on a 1000-px column renders 1000 px tall and dominates
-          // the viewport. With max-h + object-contain the video shrinks to
-          // fit and the wider container gets letterboxed (matches YouTube's
-          // behavior for non-16:9 sources).
-          style={isFs ? undefined : { aspectRatio }}
-          className={`block bg-black w-full touch-none ${
+          // ``w-full h-full`` fills the 16:9 container set on the wrapper
+          // above; ``object-contain`` then pillarboxes/letterboxes the
+          // actual stream inside that box for non-16:9 sources.
+          className={`block bg-black w-full h-full touch-none ${
             isFs
-              ? `h-full ${objectFit === "cover" ? "object-cover" : "object-contain"}`
-              : `${objectFit === "cover" ? "object-cover" : "object-contain"} sm:max-h-[78vh] sm:rounded-xl`
+              ? `${objectFit === "cover" ? "object-cover" : "object-contain"}`
+              : `${objectFit === "cover" ? "object-cover" : "object-contain"} sm:rounded-xl`
           }`}
         >
           {video.has_subtitle && !isTouch && (
