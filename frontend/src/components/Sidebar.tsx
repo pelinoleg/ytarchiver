@@ -511,8 +511,9 @@ function CompactDownloadsLink({
   );
 }
 
-/** Global Pause All / Resume All — sits next to Downloads so the user can
- *  freeze the whole worker from anywhere without navigating to /downloads. */
+/** Global Pause All / Resume All — pill-style control so it reads as a
+ *  button instead of another nav row. Centered with a slight vertical
+ *  separator from the nav links above/below. */
 function CompactPauseResume() {
   const qc = useQueryClient();
   const { data: status } = useQuery({
@@ -529,29 +530,26 @@ function CompactPauseResume() {
   });
   const paused = !!status?.paused;
   return (
-    <button
-      type="button"
-      onClick={() => toggle.mutate()}
-      disabled={toggle.isPending}
-      title={paused ? "Возобновить все загрузки" : "Поставить все загрузки на паузу"}
-      className={
-        "flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-[13px] text-left transition " +
-        (paused
-          ? "bg-amber-500/10 text-amber-200 hover:bg-amber-500/20"
-          : "text-white opacity-55 hover:opacity-100 hover:bg-zinc-900") +
-        (toggle.isPending ? " opacity-60" : "")
-      }
-    >
-      {paused
-        ? <Play  className="h-4 w-4 flex-shrink-0" />
-        : <Pause className="h-4 w-4 flex-shrink-0" />}
-      <span className="truncate flex-1">{paused ? "Resume all" : "Pause all"}</span>
-      {paused && (
-        <span className="rounded-full bg-amber-500/30 px-1.5 text-[10px] font-medium text-amber-100">
-          paused
-        </span>
-      )}
-    </button>
+    <div className="my-1 flex justify-center px-3">
+      <button
+        type="button"
+        onClick={() => toggle.mutate()}
+        disabled={toggle.isPending}
+        title={paused ? "Возобновить все загрузки" : "Поставить все загрузки на паузу"}
+        className={
+          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium transition " +
+          (paused
+            ? "bg-amber-500/25 text-amber-100 ring-1 ring-amber-400/40 hover:bg-amber-500/35"
+            : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100") +
+          (toggle.isPending ? " opacity-60" : "")
+        }
+      >
+        {paused
+          ? <Play  className="h-3.5 w-3.5" />
+          : <Pause className="h-3.5 w-3.5" />}
+        <span>{paused ? "Resume all" : "Pause all"}</span>
+      </button>
+    </div>
   );
 }
 
