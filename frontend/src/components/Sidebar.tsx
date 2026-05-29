@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Library, Download, History, Tv, FolderDown, Star, Activity,
   Loader2, Database, ListMusic, Music, HardDrive, ChevronDown, ChevronUp,
-  Home, Pause, Play,
+  Home, Pause, Play, ChevronsDownUp, ChevronsUpDown,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import {
@@ -75,6 +75,10 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
     enabled: !!watchVideoId,
   });
   const activeWatchChannelId = channelPageId ?? watchedVideo?.channel_id ?? null;
+
+  // Persisted expand-all/collapse-all flag for channel folders. The
+  // folder holding the active channel always stays open regardless.
+  const [foldersOpen, setFoldersOpen] = useLocalStorageBool("sidebar.folders.open", true);
 
   const { data: stats } = useQuery({
     queryKey: ["stats"],
@@ -163,9 +167,22 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
 
           <hr className="my-2 sm:my-3 border-zinc-800" />
 
-          <h4 className="px-6 py-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-            Channels
-          </h4>
+          <div className="px-6 py-1 flex items-center gap-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Channels
+            </h4>
+            <button
+              type="button"
+              onClick={() => setFoldersOpen(!foldersOpen)}
+              title={foldersOpen ? "Collapse all folders" : "Expand all folders"}
+              aria-label={foldersOpen ? "Collapse all folders" : "Expand all folders"}
+              className="ml-auto grid h-5 w-5 place-items-center rounded text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+            >
+              {foldersOpen
+                ? <ChevronsDownUp className="h-3.5 w-3.5" />
+                : <ChevronsUpDown className="h-3.5 w-3.5" />}
+            </button>
+          </div>
         </div>
 
         {/* Middle: only the channel list scrolls. Channels with no folder
@@ -182,6 +199,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
               channels={channels}
               folders={folders}
               activeWatchChannelId={activeWatchChannelId}
+              foldersDefaultOpen={foldersOpen}
             />
           )}
         </div>
@@ -190,8 +208,15 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
             bottom so the channel list stays the focus. */}
         <div className="flex-shrink-0 border-t border-zinc-800 px-2 py-1">
           <CompactLink icon={Library}   label="Subscriptions" to="/subscriptions" />
-          <CompactDownloadsLink count={queue.length} active={downloading} pct={downloadingPct} />
-          <CompactPauseResume />
+          <div className="flex items-stretch gap-1">
+            <CompactDownloadsLink
+              count={queue.length}
+              active={downloading}
+              pct={downloadingPct}
+              className="flex-1 min-w-0"
+            />
+            <CompactPauseResumeIcon />
+          </div>
           <CompactLink icon={History}   label="History"  to="/history" />
           <CompactLink icon={HardDrive} label="Storage"  to="/storage"  />
           <CompactLink icon={Activity}  label="Activity" to="/events" />
@@ -214,11 +239,12 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SidebarChannelTree({
-  channels, folders, activeWatchChannelId,
+  channels, folders, activeWatchChannelId, foldersDefaultOpen,
 }: {
   channels: Channel[];
   folders: ChannelFolder[];
   activeWatchChannelId: number | null;
+  foldersDefaultOpen: boolean;
 }) {
   const ungrouped = channels.filter((c) => !c.folder_id);
   const byFolder  = new Map<number, Channel[]>();
@@ -250,6 +276,7 @@ function SidebarChannelTree({
             channels={items}
             videoTotal={folderTotal(f.id)}
             activeWatchChannelId={activeWatchChannelId}
+            defaultOpen={foldersDefaultOpen}
           />
         );
       })}
@@ -266,26 +293,27 @@ function SidebarChannelTree({
 }
 
 function SidebarFolder({
-  folder, channels, videoTotal, activeWatchChannelId,
+  folder, channels, videoTotal, activeWatchChannelId, defaultOpen,
 }: {
   folder: ChannelFolder;
   channels: Channel[];
   videoTotal: number;
   activeWatchChannelId: number | null;
+  defaultOpen: boolean;
 }) {
   const location = useLocation();
   const onFolderPage = location.pathname === `/folder/${folder.id}`;
   const containsActive = channels.some((c) => c.id === activeWatchChannelId);
+  const pinnedOpen = containsActive || onFolderPage;
 
-  // Auto-controlled expansion: open when the user is engaged with this
-  // folder (watching a channel from it, or sitting on the folder page),
-  // closed otherwise. The chevron still lets the user override for the
-  // current view — overridden state is dropped on the next navigation
-  // change so the sidebar self-cleans up.
-  const [open, setOpen] = useState<boolean>(containsActive || onFolderPage);
+  // Open when (a) this folder holds the active channel / is the current
+  // folder page — always forced open — or (b) the global expand-all flag
+  // says so. Chevron toggles override locally; the override is dropped on
+  // the next nav or global-flag change so the sidebar self-cleans.
+  const [open, setOpen] = useState<boolean>(pinnedOpen || defaultOpen);
   useEffect(() => {
-    setOpen(containsActive || onFolderPage);
-  }, [containsActive, onFolderPage]);
+    setOpen(pinnedOpen || defaultOpen);
+  }, [pinnedOpen, defaultOpen]);
   const toggle = () => setOpen((s) => !s);
 
   return (
@@ -484,8 +512,8 @@ function CompactLink({
 }
 
 function CompactDownloadsLink({
-  count, active, pct,
-}: { count: number; active: Video | undefined; pct: number | null }) {
+  count, active, pct, className = "",
+}: { count: number; active: Video | undefined; pct: number | null; className?: string }) {
   return (
     <NavLink
       to="/downloads"
@@ -494,7 +522,7 @@ function CompactDownloadsLink({
           isActive
             ? "bg-zinc-800 font-medium opacity-100"
             : "hover:bg-zinc-900 opacity-55 hover:opacity-100"
-        }`
+        } ${className}`
       }
     >
       {active
@@ -515,10 +543,9 @@ function CompactDownloadsLink({
   );
 }
 
-/** Global Pause All / Resume All — pill-style control so it reads as a
- *  button instead of another nav row. Centered with a slight vertical
- *  separator from the nav links above/below. */
-function CompactPauseResume() {
+/** Global Pause All / Resume All — small icon-only button sitting flush
+ *  to the right of the Downloads link so they share one nav row. */
+function CompactPauseResumeIcon() {
   const qc = useQueryClient();
   const { data: status } = useQuery({
     queryKey: ["queue-status"],
@@ -534,26 +561,24 @@ function CompactPauseResume() {
   });
   const paused = !!status?.paused;
   return (
-    <div className="my-1 flex justify-center px-3">
-      <button
-        type="button"
-        onClick={() => toggle.mutate()}
-        disabled={toggle.isPending}
-        title={paused ? "Возобновить все загрузки" : "Поставить все загрузки на паузу"}
-        className={
-          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium transition " +
-          (paused
-            ? "bg-amber-500/25 text-amber-100 ring-1 ring-amber-400/40 hover:bg-amber-500/35"
-            : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-zinc-100") +
-          (toggle.isPending ? " opacity-60" : "")
-        }
-      >
-        {paused
-          ? <Play  className="h-3.5 w-3.5" />
-          : <Pause className="h-3.5 w-3.5" />}
-        <span>{paused ? "Resume all" : "Pause all"}</span>
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => toggle.mutate()}
+      disabled={toggle.isPending}
+      aria-label={paused ? "Resume all downloads" : "Pause all downloads"}
+      title={paused ? "Возобновить все загрузки" : "Поставить все загрузки на паузу"}
+      className={
+        "grid w-8 flex-shrink-0 place-items-center rounded-md transition " +
+        (paused
+          ? "bg-amber-500/25 text-amber-100 ring-1 ring-amber-400/40 hover:bg-amber-500/35"
+          : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100") +
+        (toggle.isPending ? " opacity-60" : "")
+      }
+    >
+      {paused
+        ? <Play  className="h-3.5 w-3.5" />
+        : <Pause className="h-3.5 w-3.5" />}
+    </button>
   );
 }
 
