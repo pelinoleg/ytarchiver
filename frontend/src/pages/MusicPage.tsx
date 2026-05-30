@@ -10,7 +10,7 @@ import {
   type Playlist, type Video,
 } from "../lib/api";
 import { formatBytes, formatDuration, formatUploadDate, timeAgo } from "../lib/format";
-import { setMusicQueue, setPlaylistQueue, shuffleArray } from "../lib/queue";
+import { setMusicQueue, shuffleArray } from "../lib/queue";
 import { VirtualVideoGrid } from "../components/VirtualVideoGrid";
 import { PlaylistStack } from "../components/PlaylistStack";
 
@@ -380,7 +380,12 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
       .map((v: Video) => v.video_id);
     if (!ids.length) return;
     const ordered = shuffled ? shuffleArray(ids) : ids;
-    setPlaylistQueue(p.id, ordered, shuffled);
+    // We navigate with ?source=music, and WatchPage reads the *music* queue in
+    // that context — so seed the music queue here. (Using setPlaylistQueue was
+    // a bug: WatchPage never reads the playlist queue when source=music, so the
+    // queue silently fell back to whatever stale music queue was left over —
+    // typically a single previously-watched track.)
+    setMusicQueue(ordered, shuffled);
     const params = new URLSearchParams({ playlist: String(p.id) });
     if (shuffled) params.set("shuffle", "1");
     params.set("source", "music");  // Stay in music-queue context so the chip + queue panel match.
