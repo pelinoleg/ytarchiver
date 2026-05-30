@@ -81,7 +81,7 @@ export function MiniPlayer() {
       // ``bottom`` uses the shared --bottom-nav-safe var which auto-resets
       // to 0 on xl (CSS media query in index.css). Adding 0.75rem so on
       // xl it matches the old ``bottom-3`` corner gap.
-      className="fixed right-3 z-40 w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl bg-black shadow-2xl ring-1 ring-zinc-700"
+      className="fixed right-3 z-40 w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-black shadow-2xl shadow-black/60 ring-1 ring-white/10"
       style={{ bottom: "calc(var(--bottom-nav-safe) + 0.75rem)" }}
     >
       <div className="relative aspect-video w-full">

@@ -32,8 +32,8 @@ export function BottomNav() {
         fixed bottom-0 left-0 right-0 z-40
         xl:hidden
         flex items-stretch justify-around
-        bg-zinc-950/95 backdrop-blur-md
-        border-t border-zinc-800
+        bg-zinc-950/85 backdrop-blur-xl
+        border-t border-white/5
       "
       style={{
         height: "var(--bottom-nav-safe)",
@@ -76,14 +76,15 @@ function Tab({
       // opacity when active. Identity comes from the icon shape and the
       // label, not from colour — keeps the bar visually calm.
       className={({ isActive }) =>
-        `relative flex flex-1 min-w-0 flex-col items-center justify-center gap-1 transition-opacity ${
-          divider ? "border-l border-zinc-800" : ""
-        } ${isActive ? "text-white opacity-100" : "text-white opacity-55"}`
+        `relative flex flex-1 min-w-0 flex-col items-center justify-center gap-1 transition-colors ${
+          divider ? "border-l border-white/5" : ""
+        } ${isActive ? "text-accent" : "text-white/55 hover:text-white/80"}`
       }
       aria-label={label}
     >
       {({ isActive }) => (
         <>
+          {isActive && <span className="absolute top-0 h-0.5 w-7 rounded-full bg-accent" />}
           <Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 1.8} />
           <span className={`text-[11px] leading-none ${isActive ? "font-semibold" : "font-medium"}`}>
             {label}
