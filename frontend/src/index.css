@@ -1,18 +1,32 @@
 @import "tailwindcss";
 
 @theme {
-  /* Match ui-design SKILL palette */
-  --color-zinc-960: #12181b;
-  --color-zinc-950: #1e2129;
-  --color-zinc-900: #2f3440;
-  --color-zinc-800: #3c4251;
-  --color-zinc-700: #404759;
-  --color-zinc-500: #6c6c7e;
-  --color-zinc-400: #9f9fb1;
-  --color-zinc-100: #e6cb91;
+  /* Warm-graphite dark theme. The whole app is built on the zinc-* ramp, so
+     these overrides reskin everything centrally. Design goals: a soft, "not
+     black" background; a clear surface-elevation staircase (bg → surface →
+     hover); soft low-contrast borders; and a warm off-white ink (not the old
+     all-gold text) for readability while keeping a cozy, warm character.
+     A faint warm tint (R≥G≥B by a few points, very low chroma) runs through
+     the whole ramp so it reads cozy, not clinical. See DESIGN.md. */
+  --color-zinc-960: #161513;   /* deepest recess: top bar */
+  --color-zinc-950: #1d1c1a;   /* page background — warm graphite, not black */
+  --color-zinc-900: #272622;   /* cards, sidebar, panels */
+  --color-zinc-800: #33322d;   /* hover + default border */
+  --color-zinc-700: #41403a;   /* stronger divider / input border */
+  --color-zinc-600: #5d5b53;   /* faint lines, disabled glyphs */
+  --color-zinc-500: #95928a;   /* muted text — counts, timestamps (≥4.5:1 on surfaces too) */
+  --color-zinc-400: #b0ada4;   /* secondary text — metadata, channel names */
+  --color-zinc-300: #ccc9c1;
+  --color-zinc-200: #e6e3db;
+  --color-zinc-100: #f1ede4;   /* primary text + "white" surfaces — warm off-white */
 }
 
 :root {
+  /* Tell the UA every native control (form inputs, the density range slider,
+     date pickers, native scrollbars) to render in dark mode so they match the
+     theme instead of flashing a light default. */
+  color-scheme: dark;
+
   /* TopBar height (visual). Used to size the bar AND to offset everything
      beneath it (Sidebar top, sticky player, pull-to-refresh indicator). */
   --header-h: 3.5rem;
@@ -66,6 +80,16 @@ body {
                "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern", "liga", "calt";
+  background-color: var(--color-zinc-950);
+  color: var(--color-zinc-100);
+}
+
+/* Themed text selection — the red accent at low alpha, warm ink on top. */
+::selection {
+  background-color: color-mix(in oklab, var(--color-red-500) 32%, transparent);
+  color: var(--color-zinc-100);
 }
 
 /* Hide focus rings unless keyboard-navigating */
