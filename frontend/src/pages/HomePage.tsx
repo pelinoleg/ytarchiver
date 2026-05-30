@@ -312,7 +312,7 @@ function ChannelSection({ entry: e }: { entry: ReturnType<typeof groupedEntry> }
           )}
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="truncate text-base font-semibold text-zinc-100 group-hover:text-white">
+              <h2 className="truncate text-lg font-semibold text-zinc-100 group-hover:text-white">
                 {e.name}
               </h2>
               {e.hasNew && (
