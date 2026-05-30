@@ -1270,11 +1270,11 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
               style={{ left: `${(c.start / duration) * 100}%` }}
             />
           ))}
-          {/* Progress */}
-          <div className="absolute inset-y-0 left-0 rounded-full bg-red-500" style={{ width: `${pct}%` }} />
-          {/* Thumb */}
+          {/* Progress — apricot accent (playback), red stays for danger/live. */}
+          <div className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${pct}%` }} />
+          {/* Thumb — accent with a soft glow, grows on scrub/hover. */}
           <div
-            className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 h-3.5 w-3.5 rounded-full bg-red-500 shadow"
+            className="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 h-3.5 w-3.5 rounded-full bg-accent shadow-[0_0_10px_color-mix(in_oklab,var(--color-accent)_70%,transparent)] transition-transform duration-150 group-hover/seek:scale-110 motion-reduce:transition-none"
             style={{ left: `${pct}%` }}
           />
           {/* Hover time + chapter title (YouTube-style) */}
