@@ -102,7 +102,8 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         // ``z-50`` (above BottomNav's z-40) so the drawer covers the bar
         // entirely when open — otherwise its bottom items would be hidden
         // under the bar on phone / tablet.
-        className={`fixed bottom-0 left-0 z-50 w-70 flex flex-col border-r border-zinc-800/50 bg-zinc-950/70 backdrop-blur-xl
+        className={`fixed bottom-0 left-0 z-50 w-70 flex flex-col bg-zinc-950/70 backdrop-blur-xl
+          shadow-[10px_0_40px_-24px_rgba(0,0,0,0.9)]
           transition-transform duration-200 ease-out safe-bottom
           ${open ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
         style={{ top: "var(--header-safe-top)" }}
@@ -142,7 +143,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
             />
           </nav>
 
-          <hr className="my-2 sm:my-3 border-zinc-800" />
+          <hr className="my-2 sm:my-3 border-white/5" />
 
           <h4 className="flex items-baseline gap-2 px-6 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
             Music
@@ -170,7 +171,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
             />
           </nav>
 
-          <hr className="my-2 sm:my-3 border-zinc-800" />
+          <hr className="my-2 sm:my-3 border-white/5" />
 
           <div className="px-6 py-1 flex items-center gap-2">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">

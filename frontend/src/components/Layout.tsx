@@ -55,7 +55,8 @@ export function Layout() {
         className="pointer-events-none fixed inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(1200px 620px at 50% -160px, color-mix(in oklab, var(--color-accent) 11%, transparent), transparent 60%)",
+            "radial-gradient(1100px 560px at 50% -120px, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 56%)," +
+            "radial-gradient(760px 520px at 108% -40px, color-mix(in oklab, var(--color-accent) 12%, transparent), transparent 55%)",
         }}
       />
       <TopBar

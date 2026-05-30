@@ -71,7 +71,7 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
   if (videos.length === 0) return null;
 
   return (
-    <section className="mb-10 overflow-hidden rounded-2xl bg-zinc-900/40 ring-1 ring-zinc-800/60">
+    <section className="mb-10 overflow-hidden rounded-2xl bg-zinc-900/70 shadow-[0_14px_40px_-24px_rgba(0,0,0,0.7)]">
       {/* Desktop header — accent-coloured, click toggles desktop state. */}
       <button
         type="button"
@@ -83,7 +83,7 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
           <HistoryIcon className="h-4 w-4 text-accent" />
         </div>
         <h2 className="text-base font-semibold text-zinc-100">Continue watching</h2>
-        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-400 tabular-nums">
+        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent tabular-nums">
           {videos.length}
         </span>
         <span className="ml-auto text-zinc-500">
@@ -102,7 +102,7 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
           <HistoryIcon className="h-3.5 w-3.5 text-accent" />
         </div>
         <h2 className="text-sm font-semibold text-zinc-100">Continue watching</h2>
-        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400 tabular-nums">
+        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent tabular-nums">
           {videos.length}
         </span>
         <span className="ml-auto text-zinc-500">
@@ -113,11 +113,25 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
       {/* Horizontal carousel — single row, hidden scrollbar, snap-to-card.
           Wider thumbs on desktop, much smaller on phone so several fit on
           screen at once. */}
-      <div className={`sm:hidden border-t border-zinc-800/60 ${openMobile  ? "block" : "hidden"}`}>
-        <ContinueRow videos={videos} />
+      {/* Smooth collapse via grid-rows 0fr↔1fr (no JS height measuring, no
+          layout jump) — the row height eases instead of snapping. */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none sm:hidden ${
+          openMobile ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <ContinueRow videos={videos} />
+        </div>
       </div>
-      <div className={`hidden border-t border-zinc-800/60 ${openDesktop ? "sm:block" : "sm:hidden"}`}>
-        <ContinueRow videos={videos} />
+      <div
+        className={`hidden transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none sm:grid ${
+          openDesktop ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <ContinueRow videos={videos} />
+        </div>
       </div>
     </section>
   );
@@ -329,7 +343,7 @@ function ChannelSection({ entry: e }: { entry: ReturnType<typeof groupedEntry> }
         {hidden > 0 && (
           <Link
             to={`/channel/${e.id}`}
-            className="text-xs text-zinc-400 hover:text-zinc-100 flex-shrink-0"
+            className="flex-shrink-0 text-xs font-medium text-accent/80 hover:text-accent"
           >
             +{hidden} more →
           </Link>
@@ -354,7 +368,7 @@ function SectionHeader({ title, count }: { title: string; count: number }) {
   return (
     <h2 className="mb-3 flex items-center gap-2.5 text-lg font-semibold text-zinc-100 [text-wrap:balance]">
       <span>{title}</span>
-      <span className="rounded-full bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-zinc-400 tabular-nums">
+      <span className="rounded-full bg-accent/12 px-2 py-0.5 text-[11px] font-semibold text-accent tabular-nums">
         {count}
       </span>
     </h2>
