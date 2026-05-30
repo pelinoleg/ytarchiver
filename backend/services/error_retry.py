@@ -26,24 +26,28 @@ log = logging.getLogger(__name__)
 # Sub-strings that mean "this video will never download, stop trying."
 # Compared against ``error_message.lower()`` — order doesn't matter.
 PERMANENT_ERROR_MARKERS = (
-    "video unavailable",
-    "private video",
-    "members-only",
-    "members only",
-    "this video is unavailable",
+    # Broad catch-alls — any flavour of "gone" / "can't reach it" is permanent.
+    # We'd rather silently skip a borderline case than camp on it forever; the
+    # user explicitly wants unavailable/no-access videos dropped without fuss.
+    "unavailable",                 # video / channel / "this video is unavailable"
+    "not available",               # "this video is not available", geo-blocks
+    "no longer available",
     "video has been removed",
     "removed by the uploader",
     "removed by the user",
+    "has been terminated",         # "account associated with this video has been terminated"
+    "account associated with this video",
+    "private video",
+    "members-only",
+    "members only",
     "this live event will begin",
     "premieres in",
-    "is not available in your country",
     "deleted video",
     "requested format is not available",
     "no video formats found",
     "sign in to confirm your age",
     "copyright",
     "terms of service violation",
-    "channel is unavailable",
     "this channel does not exist",
 )
 

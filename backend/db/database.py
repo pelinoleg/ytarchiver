@@ -472,7 +472,13 @@ class DB:
         self.conn.commit()
 
     def list_playlist_videos(self, playlist_id: int):
-        """Videos in playlist order, joined with full video rows."""
+        """Videos in playlist order, joined with full video rows.
+
+        ``skipped`` / ``deleted`` rows are hidden — these are videos that turned
+        out to be unavailable / private / removed / no-access. They stay in the
+        DB as tombstones (so sync never re-queues them) but must never surface
+        in the UI; they only clutter the playlist.
+        """
         return self.conn.execute(
             "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
             "       pv.position AS playlist_position "
@@ -480,6 +486,7 @@ class DB:
             "JOIN videos v ON v.video_id = pv.video_id "
             "LEFT JOIN channels c ON c.id = v.channel_id "
             "WHERE pv.playlist_id = ? "
+            "  AND v.status NOT IN ('skipped', 'deleted') "
             "ORDER BY pv.position",
             (playlist_id,),
         ).fetchall()
