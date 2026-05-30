@@ -36,6 +36,12 @@ interface Props<T extends Video> {
   /** Text/meta height under the card (title + channel rows). Used by the
    *  dynamic rowHeight formula: cell_width × 0.5625 + textBelow. */
   textBelow?: number;
+  /** Target card width in px. When set, the column count at desktop widths
+   *  (≥1024) is derived responsively from the container width instead of the
+   *  fixed ``breakpoints`` — i.e. wider windows fit more columns, exactly like
+   *  ``repeat(auto-fill, minmax(minCardWidth, 1fr))``. Narrow widths still use
+   *  ``breakpoints`` (the 1/2-col mobile behaviour). */
+  minCardWidth?: number;
 }
 
 const DEFAULT_BREAKPOINTS = [
@@ -52,6 +58,7 @@ export function VirtualVideoGrid<T extends Video>({
   gapClass = "gap-4",
   rowPad = 16,
   textBelow = 95,
+  minCardWidth,
 }: Props<T>) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [cols, setCols] = useState(2);
@@ -71,6 +78,13 @@ export function VirtualVideoGrid<T extends Video>({
       for (const b of breakpoints) {
         if (w >= b.width) chosen = b.cols;
       }
+      // Desktop: derive columns from the target card width so the count
+      // reflows with the window (denser slider → smaller target → more
+      // columns at every width). Mirrors auto-fill minmax(minCardWidth,1fr).
+      if (minCardWidth && w >= 1024) {
+        const gap = 16;
+        chosen = Math.max(1, Math.floor((w + gap) / (minCardWidth + gap)));
+      }
       setCols(chosen);
       // Card = aspect-video image + ~textBelow px of meta text. Subtract a
       // 16-px gap allowance per inter-cell gap to size the cell width.
@@ -82,7 +96,7 @@ export function VirtualVideoGrid<T extends Video>({
     const ro = new ResizeObserver(recalc);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [breakpoints, textBelow]);
+  }, [breakpoints, textBelow, minCardWidth]);
 
   // The virtualizer is window-scroll-based, so it needs the grid's offset
   // within the page to translate row positions correctly.

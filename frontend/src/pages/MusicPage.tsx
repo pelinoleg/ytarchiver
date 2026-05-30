@@ -13,7 +13,7 @@ import { formatBytes, formatDuration, formatUploadDate, timeAgo } from "../lib/f
 import { setMusicQueue, shuffleArray, getMusicShuffle, setMusicShuffle } from "../lib/queue";
 import { VirtualVideoGrid } from "../components/VirtualVideoGrid";
 import { PlaylistStack } from "../components/PlaylistStack";
-import { useDesktopCols } from "../components/DensitySlider";
+import { useCardMin } from "../components/DensitySlider";
 import type { CSSProperties } from "react";
 
 /** Below this many tracks render the plain CSS grid (one less abstraction,
@@ -41,16 +41,16 @@ export function MusicPage() {
   const nav = useNavigate();
   const isEmpty = !tracksLoading && !playlistsLoading && tracks.length === 0 && playlists.length === 0;
 
-  // Desktop card-size slider (shared with the rest of the app). Music cards are
-  // denser, so map the chosen count +1 column here and keep a sane floor.
-  const [desktopColsRaw] = useDesktopCols();
-  const desktopCols = desktopColsRaw + 1;
+  // Desktop density slider (shared app-wide). Music cards run a touch denser
+  // than video cards, so shave the target width a bit. Columns still reflow
+  // with the window width via auto-fill / the virtual grid's minCardWidth.
+  const [cardMinRaw] = useCardMin();
+  const trackCardMin = Math.max(140, cardMinRaw - 40);
   const trackBreakpoints = [
     { width: 0, cols: 2 },
     { width: 640, cols: 3 },
-    { width: 1024, cols: desktopCols },
   ];
-  const trackGridStyle = { "--cols": desktopCols } as CSSProperties;
+  const trackGridStyle = { "--card-min": `${trackCardMin}px` } as CSSProperties;
 
   // The "all music" track-id list is what powers Play All / Shuffle All.
   const allIds = tracks.map((t) => t.video_id);
@@ -107,6 +107,7 @@ export function MusicPage() {
                 <VirtualVideoGrid
                   items={tracks}
                   breakpoints={trackBreakpoints}
+                  minCardWidth={trackCardMin}
                   textBelow={78}
                   rowPad={16}
                   renderItem={(t, idx) => (
@@ -123,7 +124,7 @@ export function MusicPage() {
               ) : (
                 <div
                   style={trackGridStyle}
-                  className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
+                  className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]"
                 >
                   {tracks.map((t, idx) => (
                     <MusicTrackCard
