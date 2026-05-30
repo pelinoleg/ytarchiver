@@ -71,7 +71,7 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
   if (videos.length === 0) return null;
 
   return (
-    <section className="mb-12 overflow-hidden rounded-2xl bg-zinc-900/40 ring-1 ring-zinc-800/60">
+    <section className="mb-10 overflow-hidden rounded-2xl bg-zinc-900/40 ring-1 ring-zinc-800/60">
       {/* Desktop header — accent-coloured, click toggles desktop state. */}
       <button
         type="button"
@@ -217,7 +217,7 @@ function ByDate({ videos }: { videos: Video[] }) {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       {sections.map((s) => (
         <DateSection key={s.title} title={s.title} videos={s.videos} />
       ))}
@@ -283,7 +283,7 @@ function ByChannel({ videos, channels }: { videos: Video[]; channels: Channel[] 
   if (entries.length === 0) return <EmptyHint />;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       {entries.map((e) => <ChannelSection key={e.id} entry={e} />)}
     </div>
   );
