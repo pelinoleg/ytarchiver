@@ -48,7 +48,15 @@ export function SubscriptionsPage() {
 
   return (
     <>
-      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Subscriptions</h1>
+      <header className="mb-5 flex items-center gap-3.5">
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-accent-ink shadow-lg shadow-accent/25">
+          <Tv className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Subscriptions</h1>
+          <p className="text-sm text-zinc-400">{channels.length} {channels.length === 1 ? "channel" : "channels"}</p>
+        </div>
+      </header>
 
       {/* Folder strip + filter chips. Edit / new actions live in the same
        *  row so the user has a single mental model of "folder management". */}

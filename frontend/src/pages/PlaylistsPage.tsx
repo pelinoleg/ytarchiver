@@ -18,7 +18,17 @@ export function PlaylistsPage() {
 
   return (
     <>
-
+      <header className="mb-5 flex items-center gap-3.5">
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-accent-ink shadow-lg shadow-accent/25">
+          <ListMusic className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Playlists</h1>
+          <p className="text-sm text-zinc-400">
+            {playlists.length} {playlists.length === 1 ? "playlist" : "playlists"}
+          </p>
+        </div>
+      </header>
 
       {isLoading ? (
         <CardGrid>
@@ -28,9 +38,11 @@ export function PlaylistsPage() {
         </CardGrid>
       ) : playlists.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <Inbox className="h-12 w-12 text-zinc-700" />
-          <h3 className="mt-4 text-lg font-semibold">No playlists yet</h3>
-          <p className="mt-1 text-sm text-zinc-400">
+          <div className="grid h-16 w-16 place-items-center rounded-2xl bg-zinc-900 ring-1 ring-white/10">
+            <Inbox className="h-7 w-7 text-zinc-500" />
+          </div>
+          <h3 className="mt-5 text-lg font-semibold text-zinc-100">No playlists yet</h3>
+          <p className="mt-2 text-sm text-zinc-400">
             Жми <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-200">+ Add</span> в шапке.
           </p>
         </div>
@@ -78,9 +90,11 @@ function PlaylistSection({
   return (
     <section>
       <div className="mb-4 flex items-center gap-2.5">
-        <Icon className="h-5 w-5 text-zinc-500" />
+        <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg bg-accent/12 text-accent">
+          <Icon className="h-4 w-4" />
+        </span>
         <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
-        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-400 tabular-nums">
+        <span className="rounded-full bg-accent/12 px-2 py-0.5 text-xs font-semibold text-accent tabular-nums">
           {count}
         </span>
       </div>
