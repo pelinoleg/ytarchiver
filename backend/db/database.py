@@ -435,14 +435,15 @@ class DB:
         description: Optional[str] = None, thumbnail_url: Optional[str] = None,
         uploader: Optional[str] = None, video_count: int = 0,
         quality: Optional[str] = None, retention_days: Optional[int] = None,
+        is_music: bool = False,
     ) -> int:
         cur = self.conn.execute(
             "INSERT INTO playlists "
             "(url, yt_playlist_id, title, description, thumbnail_url, uploader, "
-            " video_count, quality, retention_days) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " video_count, quality, retention_days, is_music) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (url, yt_playlist_id, title, description, thumbnail_url, uploader,
-             video_count, quality, retention_days),
+             video_count, quality, retention_days, 1 if is_music else 0),
         )
         self.conn.commit()
         return cur.lastrowid

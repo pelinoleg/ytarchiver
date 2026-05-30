@@ -21,6 +21,7 @@ def subscribe_playlist(
     url: str,
     quality: str | None = None,
     retention_days: int | None = None,
+    is_music: bool = False,
 ) -> int:
     """Create a playlist row. Idempotent — returns existing id if URL known."""
     norm = url.strip()
@@ -38,6 +39,7 @@ def subscribe_playlist(
         video_count=info.get("video_count") or 0,
         quality=quality,
         retention_days=retention_days,
+        is_music=is_music,
     )
     log.info("subscribed playlist %s (id=%d)", info["title"], pid)
     return pid
@@ -49,6 +51,7 @@ def subscribe_search_playlist(
     count: int,
     quality: str | None = None,
     retention_days: int | None = None,
+    is_music: bool = False,
 ) -> int:
     """Build a playlist out of the top-N YouTube search results for a query.
     yt-dlp natively understands ``ytsearchN:query`` and returns it as a playlist,
@@ -69,6 +72,7 @@ def subscribe_search_playlist(
         video_count=count,
         quality=quality,
         retention_days=retention_days,
+        is_music=is_music,
     )
     log.info("subscribed search-playlist %r count=%d (id=%d)", query, count, pid)
     return pid

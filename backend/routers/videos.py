@@ -29,6 +29,7 @@ class VideoUpdate(BaseModel):
 class ManualDownloadBody(BaseModel):
     url: str
     quality: Optional[Quality] = None
+    is_music: Optional[bool] = None
 
 
 @router.post("/download", response_model=VideoOut, status_code=201)
@@ -46,7 +47,8 @@ def manual_download(body: ManualDownloadBody, db: DB = Depends(get_db)):
         if existing["status"] not in ("done", "downloading", "queued"):
             db.set_video_status(vid, "pending", error_message=None, progress=None)
         db.update_video_fields(vid, {"keep_forever": True,
-                                     **({"quality": body.quality} if body.quality else {})})
+                                     **({"quality": body.quality} if body.quality else {}),
+                                     **({"is_music": True} if body.is_music else {})})
         return VideoOut.from_row(db.get_video(vid))
 
     try:
@@ -67,7 +69,8 @@ def manual_download(body: ManualDownloadBody, db: DB = Depends(get_db)):
         status="pending",
     )
     db.update_video_fields(vid, {"keep_forever": True,
-                                 **({"quality": body.quality} if body.quality else {})})
+                                 **({"quality": body.quality} if body.quality else {}),
+                                 **({"is_music": True} if body.is_music else {})})
     db.log_event(
         "manual_download_queued",
         video_id=vid,

@@ -180,10 +180,10 @@ export const videosApi = {
     request<Video>(`/api/videos/${videoId}`, { method: "PATCH", body: JSON.stringify(body) }),
   related: (videoId: string, limit = 12) =>
     request<Video[]>(`/api/videos/${videoId}/related?limit=${limit}`),
-  manualDownload: (url: string, quality?: Quality | null) =>
+  manualDownload: (url: string, quality?: Quality | null, is_music?: boolean) =>
     request<Video>(`/api/videos/download`, {
       method: "POST",
-      body: JSON.stringify({ url, ...(quality ? { quality } : {}) }),
+      body: JSON.stringify({ url, ...(quality ? { quality } : {}), ...(is_music ? { is_music: true } : {}) }),
     }),
   bulkDelete: (ids: number[]) =>
     request<{ deleted: number }>(`/api/videos/bulk/delete`, {
@@ -242,9 +242,9 @@ export interface Playlist {
 export const playlistsApi = {
   list:        () => request<Playlist[]>("/api/playlists"),
   get:         (id: number) => request<Playlist>(`/api/playlists/${id}`),
-  subscribe:   (body: { url: string; quality?: Quality | null; retention_days?: number | null }) =>
+  subscribe:   (body: { url: string; quality?: Quality | null; retention_days?: number | null; is_music?: boolean }) =>
     request<Playlist>("/api/playlists", { method: "POST", body: JSON.stringify(body) }),
-  subscribeSearch: (body: { query: string; count: number; quality?: Quality | null; retention_days?: number | null }) =>
+  subscribeSearch: (body: { query: string; count: number; quality?: Quality | null; retention_days?: number | null; is_music?: boolean }) =>
     request<Playlist>("/api/playlists/search", { method: "POST", body: JSON.stringify(body) }),
   update:      (id: number, body: {
     quality?: Quality | null;

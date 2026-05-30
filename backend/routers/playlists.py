@@ -22,6 +22,7 @@ class PlaylistCreate(BaseModel):
     quality: Optional[Quality] = None
     retention_days: Optional[int] = None
     keep_videos_forever: Optional[bool] = None
+    is_music: Optional[bool] = None
 
 
 class SearchPlaylistCreate(BaseModel):
@@ -30,6 +31,7 @@ class SearchPlaylistCreate(BaseModel):
     quality: Optional[Quality] = None
     retention_days: Optional[int] = None
     keep_videos_forever: Optional[bool] = None
+    is_music: Optional[bool] = None
 
 
 class PlaylistUpdate(BaseModel):
@@ -83,6 +85,7 @@ def subscribe_playlist(
         pid = playlist_sync.subscribe_playlist(
             db, url=body.url,
             quality=body.quality, retention_days=body.retention_days,
+            is_music=bool(body.is_music),
         )
     except Exception as e:
         raise HTTPException(400, f"Failed to resolve playlist: {e}")
@@ -101,6 +104,7 @@ def subscribe_search_playlist(
         pid = playlist_sync.subscribe_search_playlist(
             db, query=body.query, count=body.count,
             quality=body.quality, retention_days=body.retention_days,
+            is_music=bool(body.is_music),
         )
     except Exception as e:
         raise HTTPException(400, f"Failed to build search playlist: {e}")

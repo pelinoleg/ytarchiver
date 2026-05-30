@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Loader2, Download } from "lucide-react";
+import { X, Loader2, Download, ListMusic } from "lucide-react";
 import { videosApi, type Quality } from "../lib/api";
 
 export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [url, setUrl] = useState("");
   const [quality, setQuality] = useState<Quality | "">("");
+  const [isMusic, setIsMusic] = useState(false);
 
   const mut = useMutation({
-    mutationFn: () => videosApi.manualDownload(url.trim(), quality === "" ? null : quality),
+    mutationFn: () => videosApi.manualDownload(url.trim(), quality === "" ? null : quality, isMusic),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["videos"] });
       qc.invalidateQueries({ queryKey: ["queue"] });
@@ -80,6 +81,20 @@ export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
               <option value="360">360p</option>
             </select>
           </div>
+
+          <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={isMusic}
+              onChange={(e) => setIsMusic(e.target.checked)}
+              className="h-4 w-4 accent-red-500"
+            />
+            <span className="flex items-center gap-1.5 text-sm">
+              <ListMusic className="h-4 w-4 text-zinc-400" />
+              Это музыка
+            </span>
+            <span className="ml-auto text-xs text-zinc-500">показывать в разделе Music</span>
+          </label>
 
           {mut.isError && (
             <p className="text-sm text-red-400">{(mut.error as Error)?.message ?? "Failed"}</p>
