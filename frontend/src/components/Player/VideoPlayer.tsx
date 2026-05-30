@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import {
   Play, Pause, Maximize, Minimize,
   PictureInPicture2, Subtitles, ListVideo, RotateCcw, RotateCw,
-  SkipForward, SkipBack,
+  SkipForward, SkipBack, X,
 } from "lucide-react";
 import type { Chapter, SponsorSegment, Video, VideoVariant } from "../../lib/api";
 import { streamUrl, subtitleUrl, thumbUrl, variantsApi } from "../../lib/api";
@@ -132,6 +132,8 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   const isTouch = useIsTouch();
   // Visual feedback for double-tap-to-seek gesture.
   const [seekToast, setSeekToast] = useState<null | { dir: "back" | "fwd"; n: number }>(null);
+  // Keyboard-shortcuts cheat sheet, toggled with "?".
+  const [showHelp, setShowHelp] = useState(false);
   const lastTapRef = useRef<{ t: number; x: number } | null>(null);
   // Object-fit (letterbox vs crop). Toggled via two-finger pinch on touch
   // devices. Sticky for the current player instance; deliberately not
@@ -721,6 +723,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
         "з": "p",   // prev
       };
       const raw = e.key;
+      if (raw === "?") { e.preventDefault(); setShowHelp((s) => !s); bumpCtl(); return; }
       const key = RU_TO_EN[raw.toLowerCase()] ?? raw.toLowerCase();
       switch (key) {
         case " ":
@@ -1208,6 +1211,8 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
       )}
 
       {/* Double-tap seek visual feedback */}
+      {showHelp && <KeyboardHelp onClose={() => setShowHelp(false)} />}
+
       {seekToast && (
         <div className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${
           seekToast.dir === "back" ? "left-6" : "right-6"
@@ -1743,5 +1748,57 @@ function QualityMenu({
         document.body,
       )}
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Keyboard shortcuts cheat-sheet — toggled with "?" while watching.
+
+function KeyboardHelp({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") { e.stopPropagation(); onClose(); } }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const groups: [string, [string, string][]][] = [
+    ["Playback", [["Space / K", "Play / pause"], ["C", "Subtitles"], [", / .", "Speed − / +"]]],
+    ["Seek",     [["J / L", "−10 / +10 s"], ["← / →", "−5 / +5 s"], ["0–9", "Jump to 0–90%"]]],
+    ["Queue",    [["N", "Next"], ["P", "Previous"]]],
+    ["View",     [["F", "Fullscreen"], ["I", "Picture-in-Picture"], ["?", "This help"]]],
+  ];
+
+  return (
+    <div
+      className="absolute inset-0 z-[70] grid place-items-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-zinc-900 p-5 shadow-2xl shadow-black/60 ring-1 ring-white/10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-zinc-100">Keyboard shortcuts</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100" aria-label="Close">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+          {groups.map(([title, rows]) => (
+            <div key={title}>
+              <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-accent">{title}</div>
+              <ul className="space-y-1.5">
+                {rows.map(([k, d]) => (
+                  <li key={k} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-zinc-300">{d}</span>
+                    <kbd className="flex-shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[11px] text-zinc-200 ring-1 ring-white/10">{k}</kbd>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

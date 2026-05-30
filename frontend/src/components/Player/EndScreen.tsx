@@ -92,7 +92,7 @@ export function EndScreen({
                 <circle
                   cx="50" cy="50" r={RING_R}
                   fill="none"
-                  stroke="#fff"
+                  stroke="var(--color-accent)"
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={RING_C}
