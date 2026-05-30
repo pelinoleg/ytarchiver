@@ -50,20 +50,6 @@ export function Layout() {
     // below (-z-10) actually shows through instead of being painted over by an
     // opaque root background.
     <div className="min-h-screen text-zinc-100">
-      {/* Ambient apricot bloom — one full-viewport, fixed layer behind
-          everything (incl. the translucent top bar / sidebar) so the glow
-          reads continuously instead of seaming against solid chrome. */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10"
-        style={{
-          // Single, very soft top glow. The bright core sits ABOVE the
-          // viewport (-340px) so only the smooth falloff shows in-page — an
-          // even warm wash, not a visible blob/splotch.
-          background:
-            "radial-gradient(1500px 820px at 50% -360px, color-mix(in oklab, var(--color-accent) 30%, transparent), transparent 60%)",
-        }}
-      />
       <TopBar
         onAddChannel ={() => setAddOpen(true)}
         onAddPlaylist={() => { setPlMode("url");    setPlOpen(true); }}

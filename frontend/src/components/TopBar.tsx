@@ -36,7 +36,7 @@ export function TopBar({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center gap-2 bg-zinc-950/70 backdrop-blur-xl px-2 md:px-3 shadow-[0_6px_20px_-16px_rgba(0,0,0,0.7)] xl:top-[var(--shell-gap)] xl:left-[var(--content-left)] xl:right-[var(--shell-gap)] xl:rounded-2xl xl:bg-zinc-900/80 xl:ring-1 xl:ring-white/10"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center gap-2 bg-zinc-950/70 backdrop-blur-xl px-2 md:px-3 shadow-[0_6px_20px_-16px_rgba(0,0,0,0.7)] xl:top-[var(--shell-gap)] xl:left-[var(--content-left)] xl:right-[var(--shell-gap)] xl:rounded-2xl xl:bg-zinc-900/80"
       style={{
         // iOS standalone: extend the header background up under the status bar
         // and push controls below the notch.
