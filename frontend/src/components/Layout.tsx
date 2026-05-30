@@ -82,10 +82,11 @@ export function Layout() {
         // sticky player's ``top: --header-safe-top`` offset, pushing the
         // player a header-height down from where it should sit. The
         // horizontal-blowout safety lives on <html> in index.css instead.
-        className="ml-0 xl:ml-70 min-h-screen safe-bottom xl:pb-0"
+        className="min-h-screen safe-bottom xl:pb-0"
         style={{
+          marginLeft: "var(--content-left)",
           paddingBottom: "var(--bottom-nav-safe)",
-          paddingTop: "var(--header-safe-top)",
+          paddingTop: "var(--content-top)",
           // Drag the entire content down while the user is pulling. CRITICAL
           // detail: when NOT pulling, ``transform`` must be ``undefined``,
           // not ``translate3d(0,0,0)`` — any transform (even identity)

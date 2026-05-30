@@ -8,17 +8,17 @@
      all-gold text) for readability while keeping a cozy, warm character.
      A faint warm tint (R≥G≥B by a few points, very low chroma) runs through
      the whole ramp so it reads cozy, not clinical. See DESIGN.md. */
-  --color-zinc-960: #161513;   /* deepest recess: top bar */
-  --color-zinc-950: #1d1c1a;   /* page background — warm graphite, not black */
-  --color-zinc-900: #272622;   /* cards, sidebar, panels */
-  --color-zinc-800: #33322d;   /* hover + default border */
-  --color-zinc-700: #41403a;   /* stronger divider / input border */
-  --color-zinc-600: #5d5b53;   /* faint lines, disabled glyphs */
-  --color-zinc-500: #95928a;   /* muted text — counts, timestamps (≥4.5:1 on surfaces too) */
-  --color-zinc-400: #b0ada4;   /* secondary text — metadata, channel names */
-  --color-zinc-300: #ccc9c1;
-  --color-zinc-200: #e6e3db;
-  --color-zinc-100: #f1ede4;   /* primary text + "white" surfaces — warm off-white */
+  --color-zinc-960: #141518;   /* deepest recess: top bar */
+  --color-zinc-950: #191a1e;   /* page background — neutral graphite, faint cool, not black */
+  --color-zinc-900: #222329;   /* cards, sidebar, panels */
+  --color-zinc-800: #2e2f37;   /* hover + default border */
+  --color-zinc-700: #3b3c45;   /* stronger divider / input border */
+  --color-zinc-600: #555863;   /* faint lines, disabled glyphs */
+  --color-zinc-500: #888b96;   /* muted text — counts, timestamps (≥4.5:1 on surfaces too) */
+  --color-zinc-400: #abaeb9;   /* secondary text — metadata, channel names */
+  --color-zinc-300: #c8cad1;
+  --color-zinc-200: #e3e4e9;
+  --color-zinc-100: #f1f2f5;   /* primary text + "white" surfaces — clean near-white */
 
   /* Brand accent — warm apricot. Carries active states, primary actions,
      selection, and soft glows. Red stays strictly for destructive / live.
@@ -49,6 +49,18 @@
      keeps the bar visually tight and gives the page more real estate. */
   --bottom-nav-h: 3rem;
   --bottom-nav-safe: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+
+  /* Floating app-shell geometry (desktop ≥xl). On smaller screens the shell is
+     full-bleed: top bar spans the top, sidebar is an overlay drawer, content
+     sits directly under the bar. The xl overrides below turn the sidebar and
+     top bar into detached, rounded, shadowed panels with a gutter around them.
+     ``--content-left`` / ``--content-top`` are the single source of truth for
+     where <main> begins, so the panels and content never disagree. */
+  --shell-gap: 0.625rem;            /* gutter around floating panels */
+  --sidebar-w: 17.5rem;             /* = w-70 */
+  --content-left: 0px;              /* mobile: no left rail */
+  --content-top: var(--header-safe-top);   /* mobile: under the full-width bar */
+  --sidebar-top: var(--header-safe-top);    /* mobile drawer starts under the bar */
 }
 
 /* On xl the bottom nav is hidden — reset the offset so floating UI hugs
@@ -57,6 +69,11 @@
   :root {
     --bottom-nav-h: 0px;
     --bottom-nav-safe: 0px;
+    /* Narrower top bar + floating-panel offsets. */
+    --header-h: 3rem;
+    --content-left: calc(var(--sidebar-w) + var(--shell-gap) * 2);
+    --content-top: calc(var(--header-h) + var(--shell-gap) * 2);
+    --sidebar-top: var(--shell-gap);
   }
 }
 

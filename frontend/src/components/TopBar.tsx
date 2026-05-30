@@ -33,7 +33,7 @@ export function TopBar({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center gap-2 bg-zinc-950/70 backdrop-blur-xl px-2 md:px-3 shadow-[0_6px_20px_-16px_rgba(0,0,0,0.7)]"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center gap-2 bg-zinc-950/70 backdrop-blur-xl px-2 md:px-3 shadow-[0_6px_20px_-16px_rgba(0,0,0,0.7)] xl:top-[var(--shell-gap)] xl:left-[var(--content-left)] xl:right-[var(--shell-gap)] xl:rounded-2xl xl:bg-zinc-900/80 xl:ring-1 xl:ring-white/10"
       style={{
         // iOS standalone: extend the header background up under the status bar
         // and push controls below the notch.
@@ -70,7 +70,7 @@ export function TopBar({
           // ``hidden md:flex`` — phone hides the logo entirely, freeing
           // top-bar real estate for search. md+ shows the full mark
           // (icon + wordmark) and aligns with the sidebar column.
-          className="hidden md:flex items-center gap-2 rounded-lg p-1 md:px-3 md:ml-1 hover:bg-zinc-800/60 active:bg-zinc-800 text-lg font-semibold tracking-tight"
+          className="hidden md:flex xl:hidden items-center gap-2 rounded-lg p-1 md:px-3 md:ml-1 hover:bg-zinc-800/60 active:bg-zinc-800 text-lg font-semibold tracking-tight"
         >
           <span className="h-6 w-6 rounded bg-red-600 grid place-items-center flex-shrink-0">
             <span className="block h-0 w-0 border-y-[5px] border-y-transparent border-l-[8px] border-l-white ml-0.5" />

@@ -34,8 +34,8 @@ export function MusicControlBar({
         fixed left-0 right-0 z-30 xl:bottom-0
         items-center gap-3 px-3 py-2
         bg-zinc-960/95 backdrop-blur-md
-        border-t border-zinc-800
-        xl:left-70
+        border-t border-white/5
+        xl:left-[var(--content-left)]
       "
       style={{ bottom: "var(--bottom-nav-safe)" }}
     >
