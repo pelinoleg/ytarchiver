@@ -15,6 +15,7 @@ import { MusicPage } from "./pages/MusicPage";
 import { MusicFavoritesPage } from "./pages/MusicFavoritesPage";
 import { FolderPage } from "./pages/FolderPage";
 import { StoragePage } from "./pages/StoragePage";
+import { InsightsPage } from "./pages/InsightsPage";
 import { SharePage } from "./pages/SharePage";
 import { SearchPage } from "./pages/SearchPage";
 import { EventsPage } from "./pages/EventsPage";
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/music"             element={<MusicPage />} />
         <Route path="/music/favorites"   element={<MusicFavoritesPage />} />
         <Route path="/storage"           element={<StoragePage />} />
+        <Route path="/insights"          element={<InsightsPage />} />
         <Route path="/share"             element={<SharePage />} />
         <Route path="/manual"            element={<ManualPage />} />
         <Route path="/search"            element={<SearchPage />} />

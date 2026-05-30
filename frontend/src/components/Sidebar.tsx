@@ -2,7 +2,7 @@ import { NavLink, useLocation, Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Library, Download, History, Tv, FolderDown, Star, Activity,
-  Loader2, Database, ListMusic, Music, HardDrive, ChevronDown, ChevronUp,
+  Loader2, Database, ListMusic, Music, HardDrive, BarChart3, ChevronDown, ChevronUp,
   Home, Pause, Play, ChevronsDownUp, ChevronsUpDown,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
@@ -239,6 +239,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
             <CompactPauseResumeIcon />
           </div>
           <CompactLink icon={History}   label="History"  to="/history" />
+          <CompactLink icon={BarChart3} label="Insights" to="/insights" />
           <CompactLink icon={HardDrive} label="Storage"  to="/storage"  />
           <CompactLink icon={Activity}  label="Activity" to="/events" />
         </div>
