@@ -39,8 +39,16 @@
   }
 }
 
+/* ``min-height`` (not ``height``) is load-bearing: combined with the
+   ``overflow-x: hidden`` below — which the CSS spec promotes to
+   ``overflow-y: auto`` — a fixed ``height: 100%`` would turn <body> into its
+   own viewport-tall scroll container. The page would then scroll *inside*
+   <body> while window.scrollY stays 0, which silently breaks the
+   window-scroll virtualizer (VirtualVideoGrid): it only ever renders the
+   first viewport of rows (~6) and never advances. ``min-height`` lets <body>
+   grow with content so the real viewport/window does the scrolling. */
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 /* Cap horizontal blowout at the document level so a long unbreakable
