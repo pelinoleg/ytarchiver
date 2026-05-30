@@ -90,12 +90,17 @@ export function TopBar({
         >
           <Search className="h-5 w-5" />
         </button>
+
+        {/* View controls live on the left; only Add + Settings sit on the right. */}
+        <CompactToggle />
+        <DensitySlider />
+        {onHome && <HomeViewToggle />}
       </div>
 
-      {/* Center: empty by default; the search field expands in only when the
-          left search icon is tapped. */}
-      {searchOpen && (
-        <div className="flex flex-1 justify-center mx-2 sm:mx-4 md:mx-8">
+      {/* Center: a flex-1 spacer that pushes Add/Settings to the right; holds
+          the expanded search field when the left search icon is tapped. */}
+      <div className="flex flex-1 justify-center px-2 sm:px-4">
+        {searchOpen && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -122,21 +127,13 @@ export function TopBar({
               <Search className="h-5 w-5" />
             </button>
           </form>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Right group: search-icon (mobile), home toggle (only on /), add
           menu, settings. Generous spacing on phone too so items don't
           crowd each other under the user's thumb. */}
-      <div className="ml-auto sm:ml-0 flex items-center gap-2.5 sm:gap-3 md:gap-4">
-        {/* Mobile-only: compact toggle for all thumbnail grids. */}
-        <CompactToggle />
-
-        {/* Desktop-only: card-size slider for all thumbnail grids. */}
-        <DensitySlider />
-
-        {onHome && <HomeViewToggle />}
-
+      <div className="flex items-center gap-2.5 sm:gap-3 md:gap-4">
         <AddMenu
           onAddChannel={onAddChannel}
           onAddPlaylist={onAddPlaylist}

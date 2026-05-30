@@ -59,6 +59,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
 
   const downloading = queue.find((v) => v.status === "downloading");
   const downloadingPct = parsePct(downloading?.progress);
+  const errorCount = queue.filter((v) => v.status === "error").length;
 
   // Active channel = the one whose page or video the user is currently
   // looking at. Used to (a) highlight the channel row and (b) auto-expand
@@ -225,13 +226,14 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
 
         {/* Secondary nav — used less often, kept icon-first compact at the
             bottom so the channel list stays the focus. */}
-        <div className="flex-shrink-0 border-t border-zinc-800 px-2 py-1">
+        <div className="flex-shrink-0 border-t border-white/5 px-2 py-1">
           <CompactLink icon={Library}   label="Subscriptions" to="/subscriptions" />
           <div className="flex items-stretch gap-1">
             <CompactDownloadsLink
               count={queue.length}
               active={downloading}
               pct={downloadingPct}
+              errorCount={errorCount}
               className="flex-1 min-w-0"
             />
             <CompactPauseResumeIcon />
@@ -401,7 +403,7 @@ function SidebarLink({
       className={({ isActive }) =>
         `flex items-center gap-4 sm:gap-6 rounded-lg px-3 py-1.5 sm:py-2 text-sm transition-colors ${
           isActive
-            ? "bg-accent/12 text-accent font-medium shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-accent)_22%,transparent)]"
+            ? "bg-accent/12 text-accent font-medium"
             : "text-white/65 hover:text-white hover:bg-zinc-960"
         }`
       }
@@ -435,7 +437,7 @@ function DownloadsLink({
       {active && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-zinc-800">
           <div
-            className="h-full bg-red-500 transition-[width] duration-300"
+            className="h-full bg-accent transition-[width] duration-300"
             style={{ width: `${pct ?? 5}%` }}
           />
         </div>
@@ -531,8 +533,8 @@ function CompactLink({
 }
 
 function CompactDownloadsLink({
-  count, active, pct, className = "",
-}: { count: number; active: Video | undefined; pct: number | null; className?: string }) {
+  count, active, pct, errorCount = 0, className = "",
+}: { count: number; active: Video | undefined; pct: number | null; errorCount?: number; className?: string }) {
   return (
     <NavLink
       to="/downloads"
@@ -545,17 +547,26 @@ function CompactDownloadsLink({
       }
     >
       {active
-        ? <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
+        ? <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-accent" />
         : <Download className="h-4 w-4 flex-shrink-0" />}
       <span className="truncate flex-1">Downloads</span>
+      {/* Error tally — a red circle with the count, only when something failed. */}
+      {errorCount > 0 && (
+        <span
+          className="grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[10px] font-bold tabular-nums text-white"
+          title={`${errorCount} failed`}
+        >
+          {errorCount}
+        </span>
+      )}
       {count > 0 && (
-        <span className={`rounded-full px-1.5 text-[10px] font-medium tabular-nums ${
-          active ? "bg-red-600 text-white" : "bg-zinc-800 text-zinc-300"
-        }`}>{count}</span>
+        <span className="rounded-full bg-accent/15 px-1.5 text-[10px] font-semibold tabular-nums text-accent">
+          {count}
+        </span>
       )}
       {active && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-zinc-800">
-          <div className="h-full bg-red-500 transition-[width] duration-300" style={{ width: `${pct ?? 5}%` }} />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/10">
+          <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${pct ?? 5}%` }} />
         </div>
       )}
     </NavLink>
@@ -617,7 +628,7 @@ function StatsFooter({
 }) {
   const [open, setOpen] = useLocalStorageBool("sidebar.stats.open", false);
   return (
-    <div className="hidden xl:block flex-shrink-0 border-t border-zinc-800">
+    <div className="hidden xl:block flex-shrink-0 border-t border-white/5">
       <button
         type="button"
         onClick={() => setOpen(!open)}
