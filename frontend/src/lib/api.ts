@@ -472,6 +472,8 @@ export const queueApi = {
   pause:   () => request<QueueStatus>("/api/queue/pause", { method: "POST" }),
   resume:  () => request<QueueStatus>("/api/queue/resume", { method: "POST" }),
   retry:   (videoId: string) => request<Video>(`/api/queue/${videoId}/retry`, { method: "POST" }),
+  retryAll:   () => request<{ requeued: number }>("/api/queue/retry-all", { method: "POST" }),
+  prioritize: (videoId: string) => request<Video>(`/api/queue/${videoId}/prioritize`, { method: "POST" }),
 };
 
 export interface SponsorSegment {

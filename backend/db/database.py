@@ -181,6 +181,13 @@ _MIGRATIONS: list[tuple[str, list[str]]] = [
         ")",
         "CREATE INDEX IF NOT EXISTS idx_video_variants_video ON video_variants(video_id)",
     ]),
+    ("0020_queue_priority", [
+        # Manual download priority. Higher = dispatched sooner. The worker and
+        # the queue listing order by ``priority DESC`` before ``added_at`` so a
+        # "download next" action jumps a video to the front without touching
+        # added_at (which the UI shows as "added X ago").
+        "ALTER TABLE videos ADD COLUMN priority INTEGER NOT NULL DEFAULT 0",
+    ]),
 ]
 
 
@@ -960,8 +967,28 @@ class DB:
             "ORDER BY CASE v.status WHEN 'downloading' THEN 1 "
             "                       WHEN 'queued'      THEN 2 "
             "                       WHEN 'pending'     THEN 3 "
-            "                       ELSE 4 END, v.added_at"
+            "                       ELSE 4 END, v.priority DESC, v.added_at"
         ).fetchall()
+
+    def retry_all_failed(self) -> int:
+        """Flip every errored video back to pending (user override of the
+        permanent-skip too). Returns how many were requeued."""
+        cur = self.conn.execute(
+            "UPDATE videos SET status = 'pending', error_message = NULL, progress = NULL, retry_count = 0 "
+            "WHERE status = 'error' AND is_short = 0"
+        )
+        self.conn.commit()
+        return cur.rowcount
+
+    def prioritize_video(self, video_id: str) -> None:
+        """Bump a video to the front of the queue (download next) without
+        touching added_at."""
+        row = self.conn.execute("SELECT COALESCE(MAX(priority), 0) AS m FROM videos").fetchone()
+        self.conn.execute(
+            "UPDATE videos SET priority = ? WHERE video_id = ?",
+            ((row["m"] if row else 0) + 1, video_id),
+        )
+        self.conn.commit()
 
     def list_history(self, limit: int = 200):
         return self.conn.execute(

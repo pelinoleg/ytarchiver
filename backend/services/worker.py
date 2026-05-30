@@ -220,7 +220,7 @@ class DownloadWorker:
                 "SELECT v.*, c.quality AS channel_quality, c.name AS channel_name "
                 "FROM videos v JOIN channels c ON c.id = v.channel_id "
                 "WHERE v.status = 'pending' AND v.is_short = 0 "
-                "ORDER BY v.added_at LIMIT 1"
+                "ORDER BY v.priority DESC, v.added_at LIMIT 1"
             ).fetchone()
             if not row:
                 conn.execute("COMMIT")

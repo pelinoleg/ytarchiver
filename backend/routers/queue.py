@@ -57,6 +57,21 @@ def resume(db: DB = Depends(get_db)):
     return queue_status(db)
 
 
+@router.post("/retry-all")
+def retry_all(db: DB = Depends(get_db)):
+    """Requeue every failed video at once."""
+    return {"requeued": db.retry_all_failed()}
+
+
+@router.post("/{video_id}/prioritize", response_model=VideoOut)
+def prioritize(video_id: str, db: DB = Depends(get_db)):
+    """Move a queued video to the front so it downloads next."""
+    if not db.get_video(video_id):
+        raise HTTPException(404, "Video not found")
+    db.prioritize_video(video_id)
+    return VideoOut.from_row(db.get_video(video_id))
+
+
 @router.post("/{video_id}/retry", response_model=VideoOut)
 def retry(video_id: str, db: DB = Depends(get_db)):
     row = db.get_video(video_id)

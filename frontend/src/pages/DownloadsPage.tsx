@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Inbox, Loader2, AlertTriangle, Clock, RefreshCw, X, Download,
-  Gauge, Hourglass, Pause, Play, ChevronDown, ChevronRight, ListMusic, Tv,
+  Gauge, Hourglass, Pause, Play, ChevronDown, ChevronRight, ListMusic, Tv, ArrowUpToLine,
 } from "lucide-react";
 import {
   queueApi, videosApi, playlistsApi, musicApi, thumbUrl,
@@ -11,6 +11,7 @@ import {
 } from "../lib/api";
 import { formatBytes, formatDuration } from "../lib/format";
 import { useConfirm } from "../components/ConfirmProvider";
+import { useToast } from "../components/ToastProvider";
 
 export function DownloadsPage() {
   const qc = useQueryClient();
@@ -93,6 +94,7 @@ export function DownloadsPage() {
               iconClass="text-red-400"
               title="Failed"
               count={failed.length}
+              action={<RetryAllButton count={failed.length} />}
             >
               <div className="space-y-2">
                 {failed.map((v) => <FailedCard key={v.id} v={v} />)}
@@ -220,13 +222,14 @@ function Pill({
 /* ────────────────────────────  Sections  ──────────────────────────────── */
 
 function Section({
-  icon: Icon, iconClass, title, count, children,
+  icon: Icon, iconClass, title, count, children, action,
 }: {
   icon: typeof Loader2;
   iconClass?: string;
   title: string;
   count: number;
   children: React.ReactNode;
+  action?: React.ReactNode;
 }) {
   return (
     <section>
@@ -236,9 +239,34 @@ function Section({
         <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400 tabular-nums">
           {count}
         </span>
+        {action && <div className="ml-auto">{action}</div>}
       </div>
       {children}
     </section>
+  );
+}
+
+function RetryAllButton({ count }: { count: number }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const mut = useMutation({
+    mutationFn: () => queueApi.retryAll(),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["queue"] });
+      qc.invalidateQueries({ queryKey: ["videos"] });
+      toast(`Re-queued ${r.requeued} failed`);
+    },
+    onError: () => toast("Couldn't re-queue", "error"),
+  });
+  return (
+    <button
+      onClick={() => mut.mutate()}
+      disabled={mut.isPending}
+      className="flex items-center gap-1.5 rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent ring-1 ring-accent/25 hover:bg-accent/25 disabled:opacity-50"
+    >
+      <RefreshCw className={`h-3.5 w-3.5 ${mut.isPending ? "animate-spin" : ""}`} />
+      Retry all{count > 1 ? ` (${count})` : ""}
+    </button>
   );
 }
 
@@ -508,12 +536,18 @@ function ActiveCard({ v }: { v: Video }) {
 function CompactRow({ v }: { v: Video }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const toast = useToast();
   const cancel = useMutation({
     mutationFn: () => videosApi.delete(v.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["queue"] });
       qc.invalidateQueries({ queryKey: ["videos"] });
     },
+  });
+  const prioritize = useMutation({
+    mutationFn: () => queueApi.prioritize(v.video_id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["queue"] }); toast("Moved to the front — downloads next"); },
+    onError: () => toast("Couldn't reprioritize", "error"),
   });
 
   const thumb = v.thumbnail_path ? thumbUrl(v.video_id) : v.thumbnail_url;
@@ -541,6 +575,15 @@ function CompactRow({ v }: { v: Video }) {
           )}
         </p>
       </div>
+      <button
+        onClick={() => prioritize.mutate()}
+        disabled={prioritize.isPending}
+        className="flex-shrink-0 rounded-full p-2 text-zinc-500 hover:bg-zinc-700 hover:text-accent opacity-0 group-hover:opacity-100 transition-opacity"
+        aria-label="Download next"
+        title="Download next"
+      >
+        <ArrowUpToLine className="h-4 w-4" />
+      </button>
       <button
         onClick={async () => {
           const ok = await confirm({
