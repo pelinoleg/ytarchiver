@@ -66,6 +66,10 @@ export interface Video {
   kept_by_playlist?: boolean;
   /** True when the video is music only because it's in a music playlist. */
   is_music_via_playlist?: boolean;
+  /** Playlist the queued video belongs to (lowest id if several). Only set by
+   *  the queue endpoint — used to group the Downloads page. */
+  playlist_id?: number | null;
+  playlist_title?: string | null;
   // Transient: live download telemetry, populated from the WS hook only.
   // Not part of the server response shape.
   downloaded_bytes?: number;

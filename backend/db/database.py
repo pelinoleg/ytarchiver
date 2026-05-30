@@ -943,8 +943,18 @@ class DB:
 
     def list_active_queue(self):
         return self.conn.execute(
-            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
-            "FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
+            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+            "       pl.id AS playlist_id, pl.title AS playlist_title "
+            "FROM videos v "
+            "LEFT JOIN channels c ON c.id = v.channel_id "
+            # First playlist (lowest id) the video belongs to — used by the
+            # Downloads page to group the queue by playlist. Derived once and
+            # joined, rather than two correlated subqueries per row.
+            "LEFT JOIN ( "
+            "  SELECT pv.video_id, MIN(pv.playlist_id) AS pid "
+            "  FROM playlist_videos pv GROUP BY pv.video_id "
+            ") fp ON fp.video_id = v.video_id "
+            "LEFT JOIN playlists pl ON pl.id = fp.pid "
             "WHERE v.status IN ('pending', 'queued', 'downloading', 'error') "
             "  AND v.is_short = 0 "
             "ORDER BY CASE v.status WHEN 'downloading' THEN 1 "

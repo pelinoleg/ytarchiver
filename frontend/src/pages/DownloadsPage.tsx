@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Inbox, Loader2, AlertTriangle, Clock, RefreshCw, X, Download,
-  Gauge, Hourglass, Pause, Play,
+  Gauge, Hourglass, Pause, Play, ChevronDown, ChevronRight, ListMusic, Tv,
 } from "lucide-react";
-import { queueApi, videosApi, thumbUrl, type Video } from "../lib/api";
+import {
+  queueApi, videosApi, playlistsApi, musicApi, thumbUrl,
+  type Video, type Playlist,
+} from "../lib/api";
 import { formatBytes, formatDuration } from "../lib/format";
 import { useConfirm } from "../components/ConfirmProvider";
 
@@ -79,9 +83,7 @@ export function DownloadsPage() {
               title="Waiting"
               count={waiting.length}
             >
-              <div className="overflow-hidden rounded-xl bg-zinc-900/40 ring-1 ring-zinc-800/60">
-                {waiting.map((v) => <CompactRow key={v.id} v={v} />)}
-              </div>
+              <WaitingGroups items={waiting} />
             </Section>
           )}
 
@@ -237,6 +239,165 @@ function Section({
       </div>
       {children}
     </section>
+  );
+}
+
+/* ─────────────────────────  Waiting, grouped  ─────────────────────────── */
+
+// Max rows rendered per expanded group — keeps the DOM bounded even when a
+// single playlist has thousands queued. The rest are reachable via the group's
+// own page (the "+N more" footer link).
+const GROUP_ROW_CAP = 40;
+
+type QueueGroupData = {
+  key: string;
+  kind: "playlist" | "channel";
+  id: number;
+  title: string;
+  thumbnail: string | null;
+  items: Video[];
+};
+
+function WaitingGroups({ items }: { items: Video[] }) {
+  // Playlist done/total powers each group's progress bar. Regular and music
+  // playlist lists are disjoint, so merge both, keyed by id.
+  const { data: regularPls = [] } = useQuery({ queryKey: ["playlists"], queryFn: playlistsApi.list });
+  const { data: musicPls = [] }   = useQuery({ queryKey: ["music", "playlists"], queryFn: musicApi.playlists });
+  const plById = new Map<number, Playlist>();
+  for (const p of [...regularPls, ...musicPls]) plById.set(p.id, p);
+
+  // Group by playlist when the video has one, else by channel.
+  const groups: QueueGroupData[] = (() => {
+    const map = new Map<string, QueueGroupData>();
+    for (const v of items) {
+      const key = v.playlist_id ? `p:${v.playlist_id}` : `c:${v.channel_id}`;
+      let g = map.get(key);
+      if (!g) {
+        g = v.playlist_id
+          ? {
+              key, kind: "playlist", id: v.playlist_id,
+              title: plById.get(v.playlist_id)?.title ?? v.playlist_title ?? "Playlist",
+              thumbnail: plById.get(v.playlist_id)?.thumbnail_url ?? null,
+              items: [],
+            }
+          : {
+              key, kind: "channel", id: v.channel_id,
+              title: v.channel_name ?? "Unknown channel",
+              thumbnail: v.channel_thumbnail ?? null,
+              items: [],
+            };
+        map.set(key, g);
+      }
+      g.items.push(v);
+    }
+    return [...map.values()].sort((a, b) => b.items.length - a.items.length);
+  })();
+
+  // First group expanded by default, rest collapsed. User toggles override the
+  // default and are keyed by group id, so they survive the 3s refetch.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+
+  if (groups.length === 1) {
+    // No accordion chrome for a single group — just show its (capped) rows.
+    return <GroupRows items={groups[0].items} to={`/${groups[0].kind === "playlist" ? "playlist" : "channel"}/${groups[0].id}`} />;
+  }
+
+  return (
+    <div className="space-y-2">
+      {groups.map((g, i) => (
+        <QueueGroup
+          key={g.key}
+          g={g}
+          open={overrides[g.key] ?? i === 0}
+          playlist={g.kind === "playlist" ? plById.get(g.id) : undefined}
+          onToggle={() => setOverrides((o) => ({ ...o, [g.key]: !(o[g.key] ?? i === 0) }))}
+        />
+      ))}
+    </div>
+  );
+}
+
+function QueueGroup({
+  g, open, playlist, onToggle,
+}: {
+  g: QueueGroupData;
+  open: boolean;
+  playlist: Playlist | undefined;
+  onToggle: () => void;
+}) {
+  const total = playlist?.video_count ?? 0;
+  const done  = playlist?.done_count ?? 0;
+  const pct   = total > 0 ? Math.min(100, (done / total) * 100) : 0;
+  const to = g.kind === "playlist" ? `/playlist/${g.id}` : `/channel/${g.id}`;
+  const round = g.kind === "channel" ? "rounded-full" : "rounded-lg";
+
+  return (
+    <div className="overflow-hidden rounded-xl bg-zinc-900/40 ring-1 ring-zinc-800/60">
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          aria-expanded={open}
+        >
+          <span className="flex-shrink-0 text-zinc-500">
+            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </span>
+          {g.thumbnail ? (
+            <img src={g.thumbnail} alt="" referrerPolicy="no-referrer" loading="lazy"
+                 className={`h-9 w-9 flex-shrink-0 object-cover bg-zinc-800 ${round}`} />
+          ) : (
+            <div className={`grid h-9 w-9 flex-shrink-0 place-items-center bg-zinc-800 ${round}`}>
+              {g.kind === "playlist"
+                ? <ListMusic className="h-4 w-4 text-fuchsia-300/70" />
+                : <Tv className="h-4 w-4 text-zinc-500" />}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-zinc-100" title={g.title}>{g.title}</p>
+            {g.kind === "playlist" && total > 0 ? (
+              <div className="mt-1 flex items-center gap-2">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                  <div className="h-full bg-fuchsia-500 transition-[width] duration-500" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="flex-shrink-0 text-[11px] tabular-nums text-zinc-400">
+                  {done} / {total} · {pct < 10 ? pct.toFixed(1) : pct.toFixed(0)}%
+                </span>
+              </div>
+            ) : (
+              <p className="mt-0.5 text-[11px] capitalize text-zinc-500">{g.kind}</p>
+            )}
+          </div>
+        </button>
+        <span className="flex-shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-200 tabular-nums ring-1 ring-amber-500/25">
+          {g.items.length}
+        </span>
+      </div>
+      {open && (
+        <div className="border-t border-zinc-800/50">
+          <GroupRows items={g.items} to={to} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GroupRows({ items, to }: { items: Video[]; to: string }) {
+  const shown = items.slice(0, GROUP_ROW_CAP);
+  const extra = items.length - shown.length;
+  return (
+    <>
+      {shown.map((v) => <CompactRow key={v.id} v={v} />)}
+      {extra > 0 && (
+        <Link
+          to={to}
+          className="flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200"
+        >
+          +{extra} more in this list
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
+      )}
+    </>
   );
 }
 

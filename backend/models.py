@@ -102,6 +102,11 @@ class VideoOut(BaseModel):
     # playlist (i.e. the inheritance route). Populated by ``get_video`` and
     # ``list_music_videos``.
     is_music_via_playlist: bool = False
+    # The playlist a queued video belongs to, if any — used by the Downloads
+    # page to group the queue. Only populated by ``list_active_queue``; a video
+    # in several playlists reports the lowest playlist id.
+    playlist_id: Optional[int] = None
+    playlist_title: Optional[str] = None
 
     @classmethod
     def from_row(cls, row):
