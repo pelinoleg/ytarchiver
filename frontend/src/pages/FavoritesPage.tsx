@@ -10,12 +10,7 @@ export function FavoritesPage() {
 
   return (
     <>
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Favorites</h1>
-      <p className="mb-6 text-sm text-zinc-400">
-        Videos you starred. Like manual downloads, these aren't touched by the cleanup —
-        the retention timer and the watched-percent rule both skip them. Unstar a video
-        to make it eligible for cleanup again.
-      </p>
+      <h1 className="sr-only">Favorites</h1>
       <VideoGrid
         videos={videos}
         isLoading={isLoading}

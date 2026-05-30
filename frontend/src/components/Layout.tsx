@@ -96,7 +96,7 @@ export function Layout() {
             at --content-left (pl-0, the gutter to the sidebar is already baked
             into --content-left) and right edge at the shell gap. So content is
             as wide as the header instead of being inset by the p-6 gutter. */}
-        <div className="p-4 md:p-6 xl:py-6 xl:pl-0 xl:pr-[var(--shell-gap)]">
+        <div className="px-4 pb-4 md:px-6 md:pb-6 xl:pl-0 xl:pr-[var(--shell-gap)]">
           <Outlet />
         </div>
       </main>

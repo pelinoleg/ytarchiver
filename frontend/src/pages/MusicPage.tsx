@@ -155,12 +155,19 @@ function SectionHeader({
   icon: typeof Music; title: string; count: number;
   tone?: "fuchsia" | "amber";
 }) {
-  const iconCls = tone === "amber" ? "text-yellow-300" : "text-fuchsia-400/80";
+  const chip = tone === "amber"
+    ? "bg-yellow-400/15 text-yellow-300"
+    : "bg-fuchsia-500/15 text-fuchsia-300";
+  const countChip = tone === "amber"
+    ? "bg-yellow-400/12 text-yellow-300"
+    : "bg-fuchsia-500/12 text-fuchsia-300";
   return (
-    <div className="mb-4 flex items-baseline gap-2.5">
-      <Icon className={`h-5 w-5 self-center ${iconCls} ${tone === "amber" ? "fill-current" : ""}`} />
+    <div className="mb-4 flex items-center gap-2.5">
+      <span className={`grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg ${chip}`}>
+        <Icon className="h-4 w-4" />
+      </span>
       <h2 className="text-lg font-semibold tracking-tight text-zinc-100">{title}</h2>
-      <span className="text-sm text-zinc-500 tabular-nums">{count}</span>
+      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${countChip}`}>{count}</span>
     </div>
   );
 }
@@ -335,7 +342,7 @@ function MusicHero({
           <div className="flex flex-shrink-0 gap-1.5">
             <button
               onClick={onPlayAll}
-              className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-zinc-950 shadow hover:bg-zinc-100 active:bg-zinc-200"
+              className="flex items-center gap-1.5 rounded-full bg-gradient-to-b from-fuchsia-400 to-fuchsia-500 px-3.5 py-1.5 text-xs font-bold text-fuchsia-950 shadow-sm shadow-fuchsia-500/30 hover:-translate-y-0.5 hover:shadow-md hover:shadow-fuchsia-500/40"
             >
               <Play className="h-3.5 w-3.5 fill-current" />
               Play all

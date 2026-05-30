@@ -9,9 +9,11 @@ import { MiniPlayerProvider } from "./components/MiniPlayerProvider";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./index.css";
 import { applyStoredAccent } from "./lib/accents";
+import { applyStoredBackground } from "./lib/backgrounds";
 
-// Apply the saved accent before first paint so there's no flash of the default.
+// Apply saved accent + background before first paint so there's no flash.
 applyStoredAccent();
+applyStoredBackground();
 
 const qc = new QueryClient({
   defaultOptions: {

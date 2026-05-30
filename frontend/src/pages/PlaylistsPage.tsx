@@ -18,17 +18,7 @@ export function PlaylistsPage() {
 
   return (
     <>
-      <header className="mb-5 flex items-center gap-3.5">
-        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-accent-ink shadow-lg shadow-accent/25">
-          <ListMusic className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Playlists</h1>
-          <p className="text-sm text-zinc-400">
-            {playlists.length} {playlists.length === 1 ? "playlist" : "playlists"}
-          </p>
-        </div>
-      </header>
+      <h1 className="sr-only">Playlists</h1>
 
       {isLoading ? (
         <CardGrid>

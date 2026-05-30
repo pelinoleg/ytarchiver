@@ -5,6 +5,7 @@ import { settingsApi, maintenanceApi, backupApi, type GlobalSettings, type Impor
 import { ImportReviewModal, type ImportPayload } from "../components/ImportReviewModal";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
 import { ACCENTS, getAccentId, setAccentId } from "../lib/accents";
+import { BACKGROUNDS, getBackgroundId, setBackgroundId } from "../lib/backgrounds";
 
 const QUALITIES: Quality[] = ["best", "1080", "720", "480", "360"];
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -47,8 +48,9 @@ export function SettingsPage() {
         retention и интервал sync в своих собственных настройках.
       </p>
 
-      <div className="mb-5">
+      <div className="mb-5 space-y-5">
         <AccentSection />
+        <BackgroundSection />
       </div>
 
       <form
@@ -335,6 +337,33 @@ function AccentSection() {
                 active ? "ring-2 ring-zinc-100 ring-offset-2 ring-offset-zinc-900" : "ring-1 ring-white/10"
               }`}
               style={{ background: `linear-gradient(to bottom, ${a.accent}, ${a.strong})` }}
+            />
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+function BackgroundSection() {
+  const [current, setCurrent] = useState(getBackgroundId());
+  return (
+    <Section title="Background" subtitle="Оттенок и уровень темноты фона. Применяется сразу.">
+      <div className="flex flex-wrap gap-2.5 px-4 py-4 sm:px-5">
+        {BACKGROUNDS.map((b) => {
+          const active = current === b.id;
+          return (
+            <button
+              key={b.id}
+              type="button"
+              title={b.name}
+              aria-label={b.name}
+              aria-pressed={active}
+              onClick={() => { setBackgroundId(b.id); setCurrent(b.id); }}
+              className={`h-9 w-9 rounded-full transition-transform hover:scale-110 ${
+                active ? "ring-2 ring-accent ring-offset-2 ring-offset-zinc-900" : "ring-1 ring-white/10"
+              }`}
+              style={{ background: `linear-gradient(135deg, ${b.ramp[1]} 0 50%, ${b.ramp[2]} 50% 100%)` }}
             />
           );
         })}

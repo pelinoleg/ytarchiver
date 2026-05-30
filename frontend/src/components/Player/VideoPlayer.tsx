@@ -1270,6 +1270,16 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
               style={{ left: `${(c.start / duration) * 100}%` }}
             />
           ))}
+          {/* Current chapter — faint band highlighting its span on the bar. */}
+          {currentChapter && duration > 0 && (
+            <div
+              className="absolute inset-y-0 rounded-full bg-white/12"
+              style={{
+                left:  `${(currentChapter.start / duration) * 100}%`,
+                width: `${(((currentChapter.end ?? duration) - currentChapter.start) / duration) * 100}%`,
+              }}
+            />
+          )}
           {/* Progress — apricot accent (playback), red stays for danger/live. */}
           <div className="absolute inset-y-0 left-0 rounded-full bg-accent" style={{ width: `${pct}%` }} />
           {/* Thumb — accent with a soft glow, grows on scrub/hover. */}
@@ -1319,8 +1329,8 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
           </span>
 
           {currentChapter && (
-            <span className="hidden sm:inline ml-3 truncate text-sm text-zinc-300" title={currentChapter.title}>
-              · {currentChapter.title}
+            <span className="hidden sm:inline ml-3 truncate text-sm font-medium text-accent" title={currentChapter.title}>
+              {currentChapter.title}
             </span>
           )}
 
@@ -1367,12 +1377,12 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
                       <button
                         key={i}
                         onClick={() => { seekTo(c.start); setShowChap(false); }}
-                        className={`flex w-full items-start gap-3 px-3 py-2 text-left text-sm hover:bg-zinc-800 ${
-                          active ? "bg-zinc-800/70" : ""
+                        className={`flex w-full items-start gap-3 px-3 py-2 text-left text-sm hover:bg-white/5 ${
+                          active ? "bg-accent/12" : ""
                         }`}
                       >
-                        <span className="font-mono text-xs text-zinc-400 mt-0.5">{formatDuration(c.start)}</span>
-                        <span className="flex-1 line-clamp-2">{c.title}</span>
+                        <span className={`font-mono text-xs mt-0.5 ${active ? "text-accent" : "text-zinc-400"}`}>{formatDuration(c.start)}</span>
+                        <span className={`flex-1 line-clamp-2 ${active ? "font-semibold text-accent" : ""}`}>{c.title}</span>
                       </button>
                     );
                   })}
