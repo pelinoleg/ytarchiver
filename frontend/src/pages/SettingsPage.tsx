@@ -4,6 +4,7 @@ import { Save, Loader2, CheckCircle2, Trash2, ChevronDown, ChevronUp, Wrench, Do
 import { settingsApi, maintenanceApi, backupApi, type GlobalSettings, type ImportReport, type Quality } from "../lib/api";
 import { ImportReviewModal, type ImportPayload } from "../components/ImportReviewModal";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
+import { ACCENTS, getAccentId, setAccentId } from "../lib/accents";
 
 const QUALITIES: Quality[] = ["best", "1080", "720", "480", "360"];
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -45,6 +46,10 @@ export function SettingsPage() {
         Глобальные дефолты для всех каналов. Каждый канал может переопределить качество,
         retention и интервал sync в своих собственных настройках.
       </p>
+
+      <div className="mb-5">
+        <AccentSection />
+      </div>
 
       <form
         className="space-y-5"
@@ -310,6 +315,33 @@ export function SettingsPage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+function AccentSection() {
+  const [current, setCurrent] = useState(getAccentId());
+  return (
+    <Section title="Accent colour" subtitle="Цвет акцента интерфейса — меняй под настроение. Применяется сразу.">
+      <div className="flex flex-wrap gap-2.5 px-4 py-4 sm:px-5">
+        {ACCENTS.map((a) => {
+          const active = current === a.id;
+          return (
+            <button
+              key={a.id}
+              type="button"
+              title={a.name}
+              aria-label={a.name}
+              aria-pressed={active}
+              onClick={() => { setAccentId(a.id); setCurrent(a.id); }}
+              className={`h-8 w-8 rounded-full transition-transform hover:scale-110 ${
+                active ? "ring-2 ring-zinc-100 ring-offset-2 ring-offset-zinc-900" : "ring-1 ring-white/10"
+              }`}
+              style={{ background: `linear-gradient(to bottom, ${a.accent}, ${a.strong})` }}
+            />
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
 
 function Section({
   title, subtitle, children,

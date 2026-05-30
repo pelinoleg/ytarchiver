@@ -133,6 +133,22 @@ export function WatchPage() {
     },
   });
 
+  // ⌘/Ctrl + Delete (or Backspace) deletes the currently-open video with no
+  // confirmation, then navigates home (deleteMut handles the redirect).
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (!video || deleteMut.isPending) return;
+      e.preventDefault();
+      deleteMut.mutate();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [video, deleteMut]);
+
   const redownloadMut = useMutation({
     mutationFn: () => videosApi.redownload(videoId!),
     onSuccess: (updated) => {

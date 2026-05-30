@@ -8,6 +8,10 @@ import { SelectionProvider } from "./components/SelectionProvider";
 import { MiniPlayerProvider } from "./components/MiniPlayerProvider";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./index.css";
+import { applyStoredAccent } from "./lib/accents";
+
+// Apply the saved accent before first paint so there's no flash of the default.
+applyStoredAccent();
 
 const qc = new QueryClient({
   defaultOptions: {
