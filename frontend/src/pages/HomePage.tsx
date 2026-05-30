@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Tv, History as HistoryIcon, ChevronDown, ChevronUp } from "lucide-react";
+import { Tv, History as HistoryIcon, ChevronDown, ChevronUp, Inbox } from "lucide-react";
 import { channelsApi, historyApi, videosApi, thumbUrl, type Channel, type Video } from "../lib/api";
 import { VideoGrid } from "../components/VideoGrid";
 import { VideoCard } from "../components/VideoCard";
@@ -377,8 +377,14 @@ function Grid({ videos }: { videos: Video[] }) {
 
 function EmptyHint() {
   return (
-    <p className="py-12 text-center text-sm text-zinc-500">
-      Здесь будут видео, когда они появятся у подписанных каналов.
-    </p>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-zinc-900 ring-1 ring-zinc-800">
+        <Inbox className="h-7 w-7 text-zinc-500" />
+      </div>
+      <h3 className="mt-5 text-lg font-semibold text-zinc-100">Nothing here yet</h3>
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-400 [text-wrap:pretty]">
+        Videos from your subscriptions appear here as they download. Subscribe to a channel, or add one from the + menu.
+      </p>
+    </div>
   );
 }

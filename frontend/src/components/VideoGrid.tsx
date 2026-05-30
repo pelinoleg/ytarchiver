@@ -51,9 +51,11 @@ export function VideoGrid({
   if (videos.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <Inbox className="h-12 w-12 text-zinc-700" />
-        <h3 className="mt-4 text-lg font-semibold">{emptyTitle}</h3>
-        <p className="mt-1 max-w-md text-sm text-zinc-400">{emptyHint}</p>
+        <div className="grid h-16 w-16 place-items-center rounded-2xl bg-zinc-900 ring-1 ring-zinc-800">
+          <Inbox className="h-7 w-7 text-zinc-500" />
+        </div>
+        <h3 className="mt-5 text-lg font-semibold text-zinc-100">{emptyTitle}</h3>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-zinc-400 [text-wrap:pretty]">{emptyHint}</p>
       </div>
     );
   }
