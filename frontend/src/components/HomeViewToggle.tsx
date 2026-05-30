@@ -29,8 +29,10 @@ function Btn({
       title={title}
       aria-label={title}
       aria-pressed={active}
-      className={`rounded-full p-1.5 ${
-        active ? "bg-zinc-100 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"
+      className={`rounded-full p-1.5 transition-colors ${
+        active
+          ? "bg-gradient-to-b from-accent to-accent-strong text-accent-ink shadow-sm shadow-accent/30"
+          : "text-zinc-400 hover:text-zinc-200"
       }`}
     >
       <Icon className="h-4 w-4" />

@@ -107,7 +107,7 @@ export function VideoCard({ video }: { video: Video }) {
       onPointerLeave={cancelPress}
       onClick={onClick}
     >
-      <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900">
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900 transition-[box-shadow] duration-300 motion-reduce:transition-none group-hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-accent)_22%,transparent),0_14px_40px_-16px_color-mix(in_oklab,var(--color-accent)_45%,transparent)]">
         {thumb ? (
           <img
             src={thumb}
@@ -141,7 +141,7 @@ export function VideoCard({ video }: { video: Video }) {
             neutral (red stays reserved); disabled under reduced-motion. */}
         {video.status === "done" && !inSelectMode && !showPreview && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition-[background-color,opacity] duration-200 group-hover:bg-black/25 group-hover:opacity-100 motion-reduce:transition-none">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/15 backdrop-blur-sm scale-90 transition-transform duration-200 group-hover:scale-100 motion-reduce:transform-none">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-b from-accent to-accent-strong text-accent-ink shadow-lg shadow-accent/40 scale-90 transition-transform duration-200 group-hover:scale-100 motion-reduce:transform-none">
               <Play className="h-6 w-6 translate-x-px fill-current" />
             </span>
           </div>

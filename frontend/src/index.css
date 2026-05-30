@@ -19,6 +19,13 @@
   --color-zinc-300: #ccc9c1;
   --color-zinc-200: #e6e3db;
   --color-zinc-100: #f1ede4;   /* primary text + "white" surfaces — warm off-white */
+
+  /* Brand accent — warm apricot. Carries active states, primary actions,
+     selection, and soft glows. Red stays strictly for destructive / live.
+     ``accent-ink`` is the dark text that sits ON an apricot fill. */
+  --color-accent: #efb37e;
+  --color-accent-strong: #e89f57;
+  --color-accent-ink: #271a0a;
 }
 
 :root {
@@ -82,8 +89,17 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: "kern", "liga", "calt";
-  background-color: var(--color-zinc-950);
   color: var(--color-zinc-100);
+  /* Ambient apricot bloom across the top of the page — the soft glow the
+     references lean on. Whisper-soft (≈8%) and anchored near the top so it
+     warms the content area under the (solid) top bar without tinting reading. */
+  background-color: var(--color-zinc-950);
+  background-image: radial-gradient(
+    1100px 520px at 50% -160px,
+    color-mix(in oklab, var(--color-accent) 8%, transparent),
+    transparent 68%
+  );
+  background-repeat: no-repeat;
 }
 
 /* Themed text selection — the red accent at low alpha, warm ink on top. */

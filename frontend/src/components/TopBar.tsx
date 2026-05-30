@@ -176,7 +176,7 @@ function AddMenu({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((s) => !s)}
-        className="flex items-center gap-1.5 rounded-full bg-zinc-100 p-2 sm:px-4 sm:py-1.5 text-sm font-medium text-zinc-950 hover:bg-zinc-200"
+        className="flex items-center gap-1.5 rounded-full bg-gradient-to-b from-accent to-accent-strong p-2 text-accent-ink shadow-sm shadow-accent/30 transition-shadow hover:shadow-md hover:shadow-accent/40 sm:px-4 sm:py-1.5 text-sm font-semibold"
         aria-haspopup="menu"
         aria-expanded={open}
         title="Add new"

@@ -382,14 +382,13 @@ function SidebarLink({
     <NavLink
       to={to}
       end={end}
-      // Monochrome white throughout. Inactive → text-white opacity-65,
-      // active → opacity-100 + subtle background. Identity comes from the
-      // icon shape + label, not from a colour cue.
+      // Active row picks up the apricot accent + a faint inset glow ring;
+      // inactive rows stay quiet warm-white and lift on hover.
       className={({ isActive }) =>
-        `flex items-center gap-4 sm:gap-6 rounded-lg px-3 py-1.5 sm:py-2 text-sm text-white transition-opacity ${
+        `flex items-center gap-4 sm:gap-6 rounded-lg px-3 py-1.5 sm:py-2 text-sm transition-colors ${
           isActive
-            ? "bg-zinc-960 font-medium opacity-100"
-            : "hover:bg-zinc-960 opacity-65 hover:opacity-100"
+            ? "bg-accent/12 text-accent font-medium shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-accent)_22%,transparent)]"
+            : "text-white/65 hover:text-white hover:bg-zinc-960"
         }`
       }
     >

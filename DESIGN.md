@@ -11,8 +11,11 @@ colors:
   line-strong: "#41403a"    # stronger divider / input border (zinc-700)
   text-secondary: "#b0ada4" # channel name, metadata (zinc-400)
   text-muted: "#95928a"     # timestamps, counts (zinc-500)
-  accent: "#dc2626"         # red-600 — destructive + live/new + downloading
-  accent-soft: "#ef4444"    # red-500
+  accent: "#efb37e"         # apricot — active states, primary actions, selection, glows
+  accent-strong: "#e89f57"  # apricot hover/press + gradient bottom stop
+  accent-ink: "#271a0a"     # dark text ON an apricot fill
+  danger: "#dc2626"         # red-600 — destructive + live/new + downloading ONLY
+  danger-soft: "#ef4444"    # red-500
   success: "#34d399"        # emerald-400 — download complete
   warning: "#fbbf24"        # amber-400 — queued / pending / retrying
   music: "#e879f9"          # fuchsia-400 — music context
@@ -82,12 +85,13 @@ The theme is **not** the stock Tailwind zinc ramp — `index.css` remaps the who
 
 ## Colors
 
-Strategy: **Restrained** — a warm-neutral graphite ramp plus a single red accent under ~10% of any view. Depth comes from the lightness staircase, not from heavy borders or shadows.
+Strategy: **Committed-leaning Restrained** — a warm-neutral graphite ramp, one **apricot accent** for interaction, and red kept *only* for danger/live. Depth comes from the lightness staircase plus soft accent glows, not heavy borders.
 
-- **Background** `#1d1c1a` (page) and `#161513` (top bar / deepest recess). Warm graphite — never pure black.
+- **Background** `#1d1c1a` (page) and `#161513` (top bar / deepest recess). Warm graphite — never pure black. The page carries a whisper-soft apricot radial bloom (`accent @ 8%`) near the top.
 - **Surfaces** `#272622` (cards, sidebar, panels), hover to `#33322d`. `#33322d` doubles as the default border; `#41403a` is the stronger divider / input border.
-- **Ink ramp**: primary `#f1ede4` (warm off-white, also the "white" button/toggle fill) → secondary `#b0ada4` (metadata, ≈7:1) → muted `#95928a` (timestamps, counts, ≥4.5:1 on surfaces too). Never pure white.
-- **Accent** red `#dc2626` / `#ef4444`: live & "New" badges, the downloading state, destructive actions, and the Downloads identity. Not decorative. Also the text-selection highlight (`red-500 @ 32%`).
+- **Ink ramp**: primary `#f1ede4` (warm off-white, also the off-white surfaces) → secondary `#b0ada4` (metadata, ≈7:1) → muted `#95928a` (timestamps, counts, ≥4.5:1 on surfaces too). Never pure white.
+- **Accent (apricot)** `#efb37e` → `#e89f57` (gradient/hover), dark ink `#271a0a` on fills: active nav, active toggles, the Add button, the hover play glyph, accent glows. Applied as a subtle top-to-bottom gradient on pills, never flat-decorative.
+- **Danger / live** red `#dc2626` / `#ef4444`: "New" badges, downloading state, destructive actions, the Downloads identity, and the text-selection highlight (`red-500 @ 32%`). Red and apricot never compete — red is state, apricot is interaction.
 - **Semantic**: success `#34d399` (emerald-400), warning `#fbbf24` (amber-400, queued/pending), error `#f87171/#ef4444` (red), music `#e879f9` (fuchsia-400), info/storage `#38bdf8` (sky-400). Stock Tailwind values, which sit well on the warm-neutral base.
 
 Contrast: primary ≈16:1, secondary ≈7:1, muted ≈4.5:1 even on the lighter surfaces. Keep muted for non-essential counts/timestamps, never primary reading text.
@@ -108,7 +112,7 @@ Card titles **must** `line-clamp-2` — long titles are normal and the grid must
 
 ## Elevation
 
-Mostly flat — depth comes from the surface ramp (bg → surface → surface-hover), not shadows. Shadows appear only on genuinely floating UI: the mini-player, dropdown menus (`shadow-xl` / `shadow-2xl`), and the Downloads hero. Hover lifts are tonal (background steps up) plus a 1.02 thumbnail scale, not drop shadows. Sticky/fixed layers follow a fixed order: top bar and sidebar are `z-50`; floating bars (selection, mini-player, bottom nav) sit above content; portalled menus use `z-[60]`.
+Depth comes from the surface ramp (bg → surface → surface-hover) plus **soft accent glows**, not hard shadows. Shadows appear on floating UI (mini-player, dropdowns `shadow-xl`/`shadow-2xl`, Downloads hero) and as restrained apricot glow accents: the page-top radial bloom, the header icon chip, active-nav inset glow, accent pills (`shadow-accent/30`), and the video-card hover (a 1px apricot outline + a soft apricot drop-glow, transform/opacity play glyph). Glows stay low-alpha and on focal/interactive elements only — never a blanket effect. Hover lifts pair the glow with a 1.02 thumbnail scale. Sticky/fixed layers follow a fixed order: top bar and sidebar are `z-50`; floating bars (selection, mini-player, bottom nav) sit above content; portalled menus use `z-[60]`.
 
 ## Components
 

@@ -19,7 +19,7 @@ export function CompactToggle() {
       aria-pressed={compact}
       className={`md:hidden rounded-full p-2 transition-colors ${
         compact
-          ? "bg-zinc-100 text-zinc-950"
+          ? "bg-gradient-to-b from-accent to-accent-strong text-accent-ink shadow-sm shadow-accent/30"
           : "text-zinc-300 hover:bg-zinc-800 active:bg-zinc-700"
       }`}
     >

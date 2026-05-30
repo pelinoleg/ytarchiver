@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Tv, History as HistoryIcon, ChevronDown, ChevronUp, Inbox } from "lucide-react";
+import { Tv, History as HistoryIcon, ChevronDown, ChevronUp, Inbox, Clapperboard } from "lucide-react";
 import { channelsApi, historyApi, videosApi, thumbUrl, type Channel, type Video } from "../lib/api";
 import { VideoGrid } from "../components/VideoGrid";
 import { VideoCard } from "../components/VideoCard";
@@ -36,9 +36,29 @@ export function HomePage() {
 
   return (
     <>
-      {/* A11y anchor — the page is otherwise all thumbnails with no visible
-          title (content-first, by design). Screen readers still get a landmark. */}
-      <h1 className="sr-only">Home — your video archive</h1>
+      {/* Header — a quiet branded anchor with a soft apricot bloom. Gives the
+          page (and screen readers) a real <h1>, matching the design language. */}
+      <header className="relative mb-8 sm:mb-10">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-24 -left-6 h-44 w-80 rounded-full bg-accent/10 blur-3xl"
+        />
+        <div className="relative flex items-center gap-3.5">
+          <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-accent-ink shadow-lg shadow-accent/25">
+            <Clapperboard className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 [text-wrap:balance]">
+              Your archive
+            </h1>
+            <p className="mt-0.5 text-sm text-zinc-400">
+              {channels.length > 0
+                ? `${channels.length} ${channels.length === 1 ? "channel" : "channels"}`
+                : "Subscriptions land here automatically"}
+            </p>
+          </div>
+        </div>
+      </header>
       <ContinueWatching videos={continueWatching} />
       {mode === "flat" ? (
         <VideoGrid
@@ -79,8 +99,8 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
         className="hidden sm:flex w-full items-center gap-2.5 px-5 py-3 text-left hover:bg-zinc-900/40 transition-colors"
         aria-expanded={openDesktop}
       >
-        <div className="grid h-7 w-7 place-items-center rounded-full bg-sky-500/15 ring-1 ring-sky-500/30">
-          <HistoryIcon className="h-4 w-4 text-sky-300" />
+        <div className="grid h-7 w-7 place-items-center rounded-full bg-accent/15 ring-1 ring-accent/30">
+          <HistoryIcon className="h-4 w-4 text-accent" />
         </div>
         <h2 className="text-base font-semibold text-zinc-100">Continue watching</h2>
         <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-zinc-400 tabular-nums">
@@ -98,8 +118,8 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
         className="flex sm:hidden w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-zinc-900"
         aria-expanded={openMobile}
       >
-        <div className="grid h-6 w-6 place-items-center rounded-full bg-sky-500/15 ring-1 ring-sky-500/30">
-          <HistoryIcon className="h-3.5 w-3.5 text-sky-300" />
+        <div className="grid h-6 w-6 place-items-center rounded-full bg-accent/15 ring-1 ring-accent/30">
+          <HistoryIcon className="h-3.5 w-3.5 text-accent" />
         </div>
         <h2 className="text-sm font-semibold text-zinc-100">Continue watching</h2>
         <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-400 tabular-nums">
