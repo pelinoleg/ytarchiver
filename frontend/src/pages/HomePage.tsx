@@ -71,7 +71,7 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
   if (videos.length === 0) return null;
 
   return (
-    <section className="mb-10 overflow-hidden rounded-2xl bg-zinc-900/70 shadow-[0_14px_40px_-24px_rgba(0,0,0,0.7)]">
+    <section className="mb-6 overflow-hidden rounded-2xl bg-zinc-900/70 shadow-[0_14px_40px_-24px_rgba(0,0,0,0.7)]">
       {/* Desktop header — accent-coloured, click toggles desktop state. */}
       <button
         type="button"
@@ -140,7 +140,7 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
 function ContinueRow({ videos }: { videos: Video[] }) {
   return (
     <div className="overflow-x-auto scrollbar-hide">
-      <div className="flex gap-3 sm:gap-4 snap-x snap-mandatory px-3 py-4 sm:px-5 sm:py-5">
+      <div className="flex gap-3 sm:gap-4 snap-x snap-mandatory px-3 pb-3 pt-1 sm:px-4">
         {videos.map((v) => (
           <Link
             key={v.id}

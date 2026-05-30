@@ -80,12 +80,22 @@ export function TopBar({
           </span>
           <span>YT Archive</span>
         </Link>
+
+        {/* Search — just a bare icon (no bg/border/label). Click expands the
+            field into the bar; rarely used, so it stays out of the way. */}
+        <button
+          onClick={() => setSearchOpen(true)}
+          aria-label="Search"
+          className="rounded-full p-2 text-zinc-400 hover:text-zinc-100"
+        >
+          <Search className="h-5 w-5" />
+        </button>
       </div>
 
-      {/* Center: collapsed to a search icon by default; expands into a field on
-          click (search is rarely used, so it shouldn't dominate the bar). */}
-      <div className="hidden sm:flex flex-1 justify-center mx-4 md:mx-8 lg:mx-12">
-        {searchOpen ? (
+      {/* Center: empty by default; the search field expands in only when the
+          left search icon is tapped. */}
+      {searchOpen && (
+        <div className="flex flex-1 justify-center mx-2 sm:mx-4 md:mx-8">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -112,31 +122,13 @@ export function TopBar({
               <Search className="h-5 w-5" />
             </button>
           </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            aria-label="Search"
-            className="flex items-center gap-2 rounded-full bg-white/5 px-3.5 py-2 text-sm text-zinc-400 ring-1 ring-white/10 hover:bg-white/10 hover:text-zinc-200"
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden md:inline">Search</span>
-          </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Right group: search-icon (mobile), home toggle (only on /), add
           menu, settings. Generous spacing on phone too so items don't
           crowd each other under the user's thumb. */}
       <div className="ml-auto sm:ml-0 flex items-center gap-2.5 sm:gap-3 md:gap-4">
-        <button
-          onClick={() => navigate("/search")}
-          className="sm:hidden rounded-full p-2.5 hover:bg-zinc-800 active:bg-zinc-700"
-          aria-label="Search"
-        >
-          <Search className="h-6 w-6" />
-        </button>
-
         {/* Mobile-only: compact toggle for all thumbnail grids. */}
         <CompactToggle />
 
