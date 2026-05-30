@@ -763,21 +763,30 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   const [scrubbing, setScrubbing] = useState(false);
   const [hoverPct, setHoverPct]   = useState<number | null>(null);
 
+  const pctFromEvent = (e: React.PointerEvent): number | null => {
+    const el = seekRef.current; if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  };
   const onSeekDown = (e: React.PointerEvent) => {
     setScrubbing(true);
-    onSeekMove(e);
+    // Capture the pointer so the whole drag is delivered here even if the
+    // finger/cursor wanders off the (thin) bar — this is what makes a swipe
+    // scrub like YouTube instead of registering only the initial tap.
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const p = pctFromEvent(e);
+    if (p != null) { setHoverPct(p); seekTo(p * (duration || 0)); }
   };
   const onSeekMove = (e: React.PointerEvent) => {
-    const el = seekRef.current; if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setHoverPct(pct);
-    if (scrubbing || e.buttons & 1) seekTo(pct * (duration || 0));
+    const p = pctFromEvent(e);
+    if (p == null) return;
+    setHoverPct(p);
+    // While scrubbing (touch or mouse-drag) follow the pointer continuously.
+    if (scrubbing || (e.buttons & 1)) seekTo(p * (duration || 0));
   };
   const onSeekUp = (e: React.PointerEvent) => {
     setScrubbing(false);
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* */ }
     // Persist final position right after a manual scrub.
     savePosition();
   };
@@ -1220,15 +1229,21 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
         }`}
         style={{ background: "linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0))" }}
       >
-        {/* Seek */}
+        {/* Seek — the outer div is a tall, touch-friendly hit area; the thin
+            visual bar lives inside it. `touch-none` is essential: without it
+            the browser claims the horizontal touch-drag as a scroll/pan and
+            cancels the pointer stream, so only taps would register (never a
+            swipe scrub). */}
         <div
           ref={seekRef}
-          className="relative h-1.5 cursor-pointer hover:h-2 transition-all"
+          className="group/seek relative flex cursor-pointer touch-none select-none items-center py-2.5 -my-1.5"
           onPointerDown={onSeekDown}
           onPointerMove={onSeekMove}
           onPointerUp={onSeekUp}
-          onPointerLeave={() => setHoverPct(null)}
+          onPointerCancel={onSeekUp}
+          onPointerLeave={() => { if (!scrubbing) setHoverPct(null); }}
         >
+        <div className="relative h-1.5 w-full rounded-full transition-all group-hover/seek:h-2">
           {/* Track */}
           <div className="absolute inset-0 rounded-full bg-white/25" />
           {/* Buffered */}
@@ -1280,6 +1295,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
               </div>
             );
           })()}
+        </div>
         </div>
 
         {/* Button row — touch-friendly sizes. Prev shown only in queue
