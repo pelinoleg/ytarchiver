@@ -30,7 +30,9 @@ PERMANENT_ERROR_MARKERS = (
     # We'd rather silently skip a borderline case than camp on it forever; the
     # user explicitly wants unavailable/no-access videos dropped without fuss.
     "unavailable",                 # video / channel / "this video is unavailable"
-    "not available",               # "this video is not available", geo-blocks
+    "not available",               # "this video is not available"
+    "available in your country",   # "...not made this video available in your country" (geo-block)
+    "not made this video available",
     "no longer available",
     "video has been removed",
     "removed by the uploader",
