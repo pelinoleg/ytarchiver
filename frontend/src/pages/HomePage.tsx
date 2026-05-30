@@ -34,34 +34,26 @@ export function HomePage() {
     staleTime: 10_000,
   });
 
-  if (mode === "flat") {
-    return (
-      <>
-        <ContinueWatching videos={continueWatching} />
+  return (
+    <>
+      {/* A11y anchor — the page is otherwise all thumbnails with no visible
+          title (content-first, by design). Screen readers still get a landmark. */}
+      <h1 className="sr-only">Home — your video archive</h1>
+      <ContinueWatching videos={continueWatching} />
+      {mode === "flat" ? (
         <VideoGrid
           videos={videos}
           isLoading={isLoading}
           emptyTitle="No videos yet"
-          emptyHint="Subscribe to a channel to start populating the archive. New videos will appear here automatically."
+          emptyHint="Subscribe to a channel and new uploads land here automatically. You can also add a single video or a playlist from the + menu."
         />
-      </>
-    );
-  }
-  if (isLoading) {
-    return <VideoGrid videos={[]} isLoading emptyTitle="" emptyHint="" />;
-  }
-  if (mode === "date") {
-    return (
-      <>
-        <ContinueWatching videos={continueWatching} />
+      ) : isLoading ? (
+        <VideoGrid videos={[]} isLoading emptyTitle="" emptyHint="" />
+      ) : mode === "date" ? (
         <ByDate videos={videos} />
-      </>
-    );
-  }
-  return (
-    <>
-      <ContinueWatching videos={continueWatching} />
-      <ByChannel videos={videos} channels={channels} />
+      ) : (
+        <ByChannel videos={videos} channels={channels} />
+      )}
     </>
   );
 }
@@ -360,9 +352,11 @@ function groupedEntry(): { id: number; name: string; avatar: string | null;
 
 function SectionHeader({ title, count }: { title: string; count: number }) {
   return (
-    <h2 className="mb-3 flex items-baseline gap-2 text-base font-semibold text-zinc-100">
+    <h2 className="mb-3 flex items-center gap-2.5 text-lg font-semibold text-zinc-100 [text-wrap:balance]">
       <span>{title}</span>
-      <span className="text-xs font-normal text-zinc-500 tabular-nums">· {count}</span>
+      <span className="rounded-full bg-zinc-800/80 px-2 py-0.5 text-[11px] font-medium text-zinc-400 tabular-nums">
+        {count}
+      </span>
     </h2>
   );
 }
