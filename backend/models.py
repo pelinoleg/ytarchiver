@@ -137,6 +137,10 @@ class GlobalSettings(BaseModel):
     between_downloads_min_seconds: int = 5
     between_downloads_max_seconds: int = 15
     max_concurrent_downloads: int = 1
+    # Optional download schedule + throttle. window start==end → always on.
+    download_window_start: int = 0      # local hour 0-23
+    download_window_end: int = 0        # local hour 0-23
+    download_rate_limit_kbps: int = 0   # 0 = unlimited
     preview_width: int = 480
     preview_crf: int = 27
     preview_segments: int = 12

@@ -24,6 +24,9 @@ class SettingsUpdate(BaseModel):
     between_downloads_min_seconds: Optional[int] = None
     between_downloads_max_seconds: Optional[int] = None
     max_concurrent_downloads: Optional[int] = None
+    download_window_start: Optional[int] = None
+    download_window_end: Optional[int] = None
+    download_rate_limit_kbps: Optional[int] = None
     preview_width: Optional[int] = None
     preview_crf: Optional[int] = None
     preview_segments: Optional[int] = None

@@ -70,6 +70,19 @@ def is_paused() -> bool:
     return str(raw).strip().lower() in ("1", "true", "yes", "on")
 
 
+def within_download_window() -> bool:
+    """Whether downloads may start right now per the optional active-hours
+    window (local time). start==end → always allowed. start<end → daytime
+    window; start>end → overnight window (e.g. 23→7)."""
+    from datetime import datetime
+    start = _kv_int("download_window_start", 0)
+    end = _kv_int("download_window_end", 0)
+    if start == end:
+        return True
+    h = datetime.now().hour
+    return start <= h < end if start < end else (h >= start or h < end)
+
+
 def _kv_get(key: str) -> str | None:
     conn = get_connection()
     try:
@@ -208,7 +221,7 @@ class DownloadWorker:
         from elsewhere) can't grab the same row. Returns None if the queue is
         empty or paused.
         """
-        if is_paused():
+        if is_paused() or not within_download_window():
             return None
         conn = get_connection()
         # Manage the transaction ourselves — sqlite3's implicit commit mode would

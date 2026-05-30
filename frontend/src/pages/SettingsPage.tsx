@@ -198,6 +198,25 @@ export function SettingsPage() {
             />
           </Row>
         </Section>
+
+        <Section title="Расписание загрузок" subtitle="Когда и как быстро качать. Окно по локальному времени; старт = конец → качаем всегда.">
+          <Row
+            label="Активные часы"
+            hint="Качать только в этом окне (например 1 → 7 — ночью). Вне окна загрузки ждут. Старт = конец → без ограничения."
+          >
+            <div className="flex items-center gap-2">
+              <NumberWithUnit value={form.download_window_start} min={0} max={23} onChange={(n) => update("download_window_start", n)} unit="ч" />
+              <span className="text-xs text-zinc-500">→</span>
+              <NumberWithUnit value={form.download_window_end} min={0} max={23} onChange={(n) => update("download_window_end", n)} unit="ч" />
+            </div>
+          </Row>
+          <Row
+            label="Лимит скорости"
+            hint="Потолок скорости загрузки, КБ/с. 0 = без ограничения. Применяется к новым загрузкам."
+          >
+            <NumberWithUnit value={form.download_rate_limit_kbps} min={0} max={100000} step={100} onChange={(n) => update("download_rate_limit_kbps", n)} unit="КБ/с" />
+          </Row>
+        </Section>
         </div>
 
         <Section

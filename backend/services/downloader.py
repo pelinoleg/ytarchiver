@@ -9,6 +9,24 @@ from typing import Callable, Optional
 import yt_dlp
 
 from services.ytdlp_service import yt_opts_extra
+from db.database import get_connection
+
+
+def _rate_limit_bytes() -> Optional[int]:
+    """User-set download speed cap (KB/s) from settings, as bytes/sec for
+    yt-dlp's ``ratelimit``. 0 / unset = unlimited."""
+    try:
+        conn = get_connection()
+        try:
+            row = conn.execute(
+                "SELECT value FROM settings WHERE key = 'download_rate_limit_kbps'"
+            ).fetchone()
+        finally:
+            conn.close()
+        kbps = int(row["value"]) if row and row["value"] else 0
+        return kbps * 1024 if kbps > 0 else None
+    except Exception:
+        return None
 
 
 log = logging.getLogger(__name__)
@@ -128,6 +146,10 @@ def download_video(
             {"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"},
         ],
     }
+
+    rl = _rate_limit_bytes()
+    if rl:
+        opts["ratelimit"] = rl
 
     url = f"https://www.youtube.com/watch?v={video_id}"
     log.info("download: %s quality=%s → %s", video_id, quality, output_dir)
