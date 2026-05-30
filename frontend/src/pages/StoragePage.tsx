@@ -21,23 +21,27 @@ export function StoragePage() {
   });
 
   return (
-    <div className="space-y-10">
-      {/* Hero */}
-      <header className="overflow-hidden rounded-2xl bg-gradient-to-br from-sky-600/20 via-zinc-900 to-zinc-900 p-6 sm:p-8 ring-1 ring-sky-500/20">
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-sky-300">
-          <HardDrive className="h-4 w-4" />
-          Storage
+    <div className="space-y-8">
+      {/* Header */}
+      <header className="flex items-center gap-3.5">
+        <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-accent-ink shadow-lg shadow-accent/25">
+          <HardDrive className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Storage</h1>
+          <p className="text-sm text-zinc-400">What's eating your disk</p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Disk usage</h1>
-        {summary && (
-          <dl className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
-            <Metric label="Total"   value={formatBytes(summary.total_bytes)} accent="text-sky-300" />
-            <Metric label="Videos"  value={summary.videos.toLocaleString()} />
-            <Metric label="Average" value={formatBytes(summary.avg_bytes, true)} />
-            <Metric label="Biggest" value={formatBytes(summary.max_bytes, true)} />
-          </dl>
-        )}
       </header>
+
+      {/* KPI cards */}
+      {summary && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard label="Total on disk" value={formatBytes(summary.total_bytes)} primary />
+          <StatCard label="Videos"        value={summary.videos.toLocaleString()} />
+          <StatCard label="Average size"  value={formatBytes(summary.avg_bytes, true)} />
+          <StatCard label="Biggest file"  value={formatBytes(summary.max_bytes, true)} />
+        </div>
+      )}
 
       {/* Integrity check */}
       <IntegritySection />
@@ -124,11 +128,17 @@ export function StoragePage() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Metric({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function StatCard({ label, value, primary }: { label: string; value: string; primary?: boolean }) {
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-zinc-400">{label}</dt>
-      <dd className={`mt-1 text-2xl font-semibold tabular-nums ${accent ?? "text-zinc-100"}`}>{value}</dd>
+    <div
+      className={`rounded-2xl p-4 sm:p-5 shadow-md shadow-black/25 ${
+        primary ? "bg-gradient-to-br from-accent/15 to-accent/[0.04] ring-1 ring-accent/20" : "bg-zinc-900"
+      }`}
+    >
+      <div className="text-[11px] uppercase tracking-wide text-zinc-400">{label}</div>
+      <div className={`mt-1.5 text-2xl font-semibold tabular-nums ${primary ? "text-accent" : "text-zinc-100"}`}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -139,10 +149,12 @@ function SectionHeader({
   return (
     <div className={inline ? "" : "mb-4"}>
       <div className="flex items-center gap-2.5">
-        <Icon className="h-5 w-5 text-zinc-500" />
+        <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg bg-accent/12 text-accent">
+          <Icon className="h-4 w-4" />
+        </span>
         <h2 className="text-base font-semibold text-zinc-100">{title}</h2>
       </div>
-      {hint && <p className="mt-1 text-xs text-zinc-500">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-zinc-500 pl-[2.375rem]">{hint}</p>}
     </div>
   );
 }
@@ -265,9 +277,18 @@ function MusicStorageSection() {
 
       <div className="rounded-2xl bg-gradient-to-br from-fuchsia-600/15 via-zinc-900 to-zinc-900 p-5 ring-1 ring-fuchsia-500/20">
         <dl className="grid grid-cols-3 gap-3 sm:gap-5">
-          <Metric label="Music total" value={formatBytes(data.total_bytes)} accent="text-fuchsia-300" />
-          <Metric label="Tracks"      value={data.tracks.toLocaleString()} />
-          <Metric label="Playlists"   value={data.playlists.length.toLocaleString()} />
+          <div>
+            <dt className="text-[11px] uppercase tracking-wide text-zinc-400">Music total</dt>
+            <dd className="mt-1.5 text-2xl font-semibold tabular-nums text-fuchsia-300">{formatBytes(data.total_bytes)}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] uppercase tracking-wide text-zinc-400">Tracks</dt>
+            <dd className="mt-1.5 text-2xl font-semibold tabular-nums text-zinc-100">{data.tracks.toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] uppercase tracking-wide text-zinc-400">Playlists</dt>
+            <dd className="mt-1.5 text-2xl font-semibold tabular-nums text-zinc-100">{data.playlists.length.toLocaleString()}</dd>
+          </div>
         </dl>
 
         {data.playlists.length > 0 && (
