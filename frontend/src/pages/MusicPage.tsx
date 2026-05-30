@@ -193,7 +193,7 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
         <button
           type="button"
           onClick={() => play(getMusicShuffle())}
-          className="relative block aspect-video w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-zinc-800/70 text-left transition-all duration-300 group-hover:ring-yellow-400/50 group-hover:shadow-lg group-hover:shadow-yellow-900/30"
+          className="relative block aspect-video w-full overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 text-left transition-all duration-300 group-hover:ring-1 group-hover:ring-yellow-400/50 group-hover:shadow-lg group-hover:shadow-yellow-900/30"
           aria-label="Play favorites"
         >
           {covers.length > 0 ? (
@@ -287,7 +287,7 @@ function MusicHero({
   const totalBytes = tracks.reduce((sum, t) => sum + (t.file_size_bytes ?? 0), 0);
 
   return (
-    <header className="relative mb-6 overflow-hidden rounded-2xl ring-1 ring-zinc-800">
+    <header className="relative mb-6 overflow-hidden rounded-2xl shadow-lg shadow-black/30">
       {/* Background — cover mosaic or fallback gradient, dimmer than before. */}
       <div className="absolute inset-0">
         {covers.length > 0 ? (
@@ -423,7 +423,7 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
       <PlaylistStack accent="bg-fuchsia-500/35" accentSoft="bg-fuchsia-500/15">
         <Link
           to={`/playlist/${p.id}`}
-          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-zinc-800/70 transition-all duration-300 group-hover:ring-fuchsia-500/40 group-hover:shadow-lg group-hover:shadow-fuchsia-900/30"
+          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:ring-1 group-hover:ring-fuchsia-500/40 group-hover:shadow-lg group-hover:shadow-fuchsia-900/30"
         >
           {p.thumbnail_url ? (
             <img
@@ -675,7 +675,7 @@ function TrackMenu({ video }: { video: Video }) {
         <MoreVertical className="h-4 w-4" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-60 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 shadow-xl z-20">
+        <div className="absolute right-0 mt-1 w-60 overflow-hidden rounded-xl ring-1 ring-white/10 bg-zinc-900 shadow-2xl z-20">
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); favMut.mutate(); setOpen(false); }}
             className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-zinc-100 hover:bg-zinc-800"

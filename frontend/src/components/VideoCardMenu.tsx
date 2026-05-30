@@ -125,7 +125,7 @@ export function VideoCardMenu({ video }: { video: Video }) {
     <div
       ref={menuRef}
       onClick={stop}
-      className="fixed z-[60] overflow-y-auto overflow-x-hidden rounded-lg border border-zinc-800 bg-zinc-900 py-1 shadow-2xl"
+      className="fixed z-[60] overflow-y-auto overflow-x-hidden rounded-xl ring-1 ring-white/10 bg-zinc-900 py-1 shadow-2xl shadow-black/50"
       style={{ left: pos.left, top: pos.top, bottom: pos.bottom, width: MENU_W, maxHeight: pos.maxHeight }}
     >
       <button

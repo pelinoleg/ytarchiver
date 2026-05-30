@@ -123,7 +123,7 @@ function Hero({
 }) {
   const anyActive = active + waiting + failed > 0;
   return (
-    <header className="relative mb-8 overflow-hidden rounded-3xl ring-1 ring-zinc-800 shadow-lg shadow-black/40">
+    <header className="relative mb-8 overflow-hidden rounded-3xl shadow-xl shadow-black/40">
       <div className="absolute inset-0 bg-gradient-to-br from-red-900/35 via-zinc-900 to-zinc-950" />
       {/* Thin red glow along the top edge while anything is in flight. */}
       {active > 0 && !paused && (
@@ -329,7 +329,7 @@ function QueueGroup({
   const round = g.kind === "channel" ? "rounded-full" : "rounded-lg";
 
   return (
-    <div className="overflow-hidden rounded-xl bg-zinc-900/40 ring-1 ring-zinc-800/60">
+    <div className="overflow-hidden rounded-xl bg-zinc-900/60 shadow-[0_12px_34px_-22px_rgba(0,0,0,0.6)]">
       <div className="flex items-center gap-2 px-3 py-2.5">
         <button
           type="button"
@@ -521,7 +521,7 @@ function CompactRow({ v }: { v: Video }) {
     v.status === "queued" ? "Queued" : "Pending";
 
   return (
-    <div className="group flex items-center gap-3 px-3 py-2 border-b border-zinc-800/40 last:border-0 hover:bg-zinc-800/40">
+    <div className="group flex items-center gap-3 px-3 py-2 border-b border-white/5 last:border-0 hover:bg-zinc-800/40">
       <Link to={`/watch/${v.video_id}`}
             className="relative aspect-video w-16 flex-shrink-0 overflow-hidden rounded-md bg-zinc-800">
         {thumb && <img src={thumb} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />}

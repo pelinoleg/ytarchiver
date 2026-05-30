@@ -46,7 +46,10 @@ export function Layout() {
   }, [drawerOpen]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    // No bg here — the body is the opaque canvas, so the fixed bloom layer
+    // below (-z-10) actually shows through instead of being painted over by an
+    // opaque root background.
+    <div className="min-h-screen text-zinc-100">
       {/* Ambient apricot bloom — one full-viewport, fixed layer behind
           everything (incl. the translucent top bar / sidebar) so the glow
           reads continuously instead of seaming against solid chrome. */}
@@ -55,8 +58,8 @@ export function Layout() {
         className="pointer-events-none fixed inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(1100px 560px at 50% -120px, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 56%)," +
-            "radial-gradient(760px 520px at 108% -40px, color-mix(in oklab, var(--color-accent) 12%, transparent), transparent 55%)",
+            "radial-gradient(1000px 540px at 50% -20px, color-mix(in oklab, var(--color-accent) 26%, transparent), transparent 55%)," +
+            "radial-gradient(720px 520px at 106% 4%, color-mix(in oklab, var(--color-accent) 16%, transparent), transparent 52%)",
         }}
       />
       <TopBar
