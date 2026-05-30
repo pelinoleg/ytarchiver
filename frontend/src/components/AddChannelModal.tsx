@@ -4,14 +4,14 @@ import { X, Loader2 } from "lucide-react";
 import { channelsApi, channelFoldersApi, settingsApi, type DownloadPolicy, type Quality } from "../lib/api";
 import { RetentionPicker } from "./RetentionPicker";
 
-const POLICY_OPTIONS: { value: DownloadPolicy; label: string; hint: string }[] = [
-  { value: "new-only", label: "Only new",         hint: "Только видео, опубликованные после подписки" },
-  { value: "latest",   label: "Last N videos",    hint: "Просто последние N штук, без учёта дат" },
-  { value: "last-7",   label: "Last 7 days",      hint: "Видео за последнюю неделю + всё новое" },
-  { value: "last-30",  label: "Last 30 days",     hint: "За последний месяц + всё новое" },
-  { value: "last-90",  label: "Last 90 days",     hint: "За последние 3 месяца + всё новое" },
-  { value: "last-365", label: "Last year",        hint: "За последний год + всё новое" },
-  { value: "all",      label: "Everything",       hint: "Всё, что есть на канале (может быть много)" },
+const POLICY_OPTIONS: { value: DownloadPolicy; label: string; short: string; hint: string }[] = [
+  { value: "new-only", label: "Only new",      short: "Only new",   hint: "Только видео, опубликованные после подписки" },
+  { value: "latest",   label: "Last N videos", short: "Last N",     hint: "Просто последние N штук, без учёта дат" },
+  { value: "last-7",   label: "Last 7 days",   short: "7 days",     hint: "Видео за последнюю неделю + всё новое" },
+  { value: "last-30",  label: "Last 30 days",  short: "30 days",    hint: "За последний месяц + всё новое" },
+  { value: "last-90",  label: "Last 90 days",  short: "3 months",   hint: "За последние 3 месяца + всё новое" },
+  { value: "last-365", label: "Last year",     short: "1 year",     hint: "За последний год + всё новое" },
+  { value: "all",      label: "Everything",    short: "Everything", hint: "Всё, что есть на канале (может быть много)" },
 ];
 
 export function AddChannelModal({ onClose }: { onClose: () => void }) {
@@ -73,7 +73,7 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-zinc-900 p-5 sm:p-6 shadow-xl"
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-zinc-900 p-5 sm:p-6 shadow-2xl shadow-black/50 ring-1 ring-white/10"
         style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -86,7 +86,7 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
 
         <form
           onSubmit={(e) => { e.preventDefault(); if (url.trim()) mut.mutate(); }}
-          className="space-y-5"
+          className="space-y-4"
         >
           <div>
             <label className="block text-xs font-medium uppercase tracking-wide text-zinc-400">
@@ -106,64 +106,61 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
             <label className="block text-xs font-medium uppercase tracking-wide text-zinc-400">
               What to download
             </label>
-            <div className="mt-2 grid grid-cols-1 gap-1.5">
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {POLICY_OPTIONS.map((p) => (
-                <label
+                <button
                   key={p.value}
-                  className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 text-sm ${
+                  type="button"
+                  onClick={() => setPolicy(p.value)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                     policy === p.value
-                      ? "border-zinc-500 bg-zinc-800"
-                      : "border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/50"
+                      ? "bg-accent text-accent-ink"
+                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="policy"
-                    value={p.value}
-                    checked={policy === p.value}
-                    onChange={() => setPolicy(p.value)}
-                    className="mt-1 accent-zinc-100"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium">{p.label}</div>
-                    <div className="text-xs text-zinc-400">{p.hint}</div>
-                    {p.value === "latest" && policy === "latest" && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <input
-                          type="number" min={1} max={500}
-                          value={latestCount}
-                          onChange={(e) => setLatestCount(Math.max(1, Number(e.target.value) || 1))}
-                          className="w-24 rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm focus:border-zinc-500"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="text-xs text-zinc-400">videos</span>
-                      </div>
-                    )}
-                  </div>
-                </label>
+                  {p.short}
+                </button>
               ))}
             </div>
+            <p className="mt-2 text-xs text-zinc-400">
+              {POLICY_OPTIONS.find((p) => p.value === policy)?.hint}
+            </p>
+            {policy === "latest" && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="number" min={1} max={500}
+                  value={latestCount}
+                  onChange={(e) => setLatestCount(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-24 rounded-lg bg-zinc-950 px-3 py-1.5 text-sm ring-1 ring-white/10 focus:ring-accent/50"
+                />
+                <span className="text-xs text-zinc-400">videos</span>
+              </div>
+            )}
           </div>
 
           <div>
             <label className="block text-xs font-medium uppercase tracking-wide text-zinc-400">
-              Quality override (optional)
+              Quality override
             </label>
-            <select
-              value={quality}
-              onChange={(e) => setQuality(e.target.value as Quality | "")}
-              className="mt-2 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-600"
-            >
-              <option value="">
-                Use global default
-                {globalSettings ? ` (currently ${formatQuality(globalSettings.default_quality)})` : ""}
-              </option>
-              <option value="best">Best available</option>
-              <option value="1080">1080p</option>
-              <option value="720">720p</option>
-              <option value="480">480p</option>
-              <option value="360">360p</option>
-            </select>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {([
+                ["", `Inherit${globalSettings ? ` · ${formatQuality(globalSettings.default_quality)}` : ""}`],
+                ["best", "Best"], ["1080", "1080p"], ["720", "720p"], ["480", "480p"], ["360", "360p"],
+              ] as [Quality | "", string][]).map(([v, l]) => (
+                <button
+                  key={v || "inherit"}
+                  type="button"
+                  onClick={() => setQuality(v)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    quality === v
+                      ? "bg-accent text-accent-ink"
+                      : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -270,7 +267,7 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={mut.isPending || !url.trim()}
-              className="flex items-center gap-2 rounded-full bg-zinc-100 px-4 py-1.5 text-sm font-medium text-zinc-950 hover:bg-zinc-200 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full bg-gradient-to-b from-accent to-accent-strong px-4 py-1.5 text-sm font-semibold text-accent-ink shadow-sm shadow-accent/30 hover:shadow-md hover:shadow-accent/40 disabled:opacity-50"
             >
               {mut.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Subscribe

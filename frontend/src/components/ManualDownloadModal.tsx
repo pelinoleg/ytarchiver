@@ -27,7 +27,7 @@ export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-zinc-900 p-5 sm:p-6 shadow-xl"
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-zinc-900 p-5 sm:p-6 shadow-2xl shadow-black/50 ring-1 ring-white/10"
         style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -48,7 +48,7 @@ export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
 
         <form
           onSubmit={(e) => { e.preventDefault(); if (url.trim()) mut.mutate(); }}
-          className="space-y-5"
+          className="space-y-4"
         >
           <div>
             <label className="block text-xs font-medium uppercase tracking-wide text-zinc-400">
@@ -68,18 +68,20 @@ export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
             <label className="block text-xs font-medium uppercase tracking-wide text-zinc-400">
               Quality (optional)
             </label>
-            <select
-              value={quality}
-              onChange={(e) => setQuality(e.target.value as Quality | "")}
-              className="mt-2 w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-600"
-            >
-              <option value="">Use global default</option>
-              <option value="best">Best available</option>
-              <option value="1080">1080p</option>
-              <option value="720">720p</option>
-              <option value="480">480p</option>
-              <option value="360">360p</option>
-            </select>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {([["", "Default"], ["best", "Best"], ["1080", "1080p"], ["720", "720p"], ["480", "480p"], ["360", "360p"]] as [Quality | "", string][]).map(([v, l]) => (
+                <button
+                  key={v || "default"}
+                  type="button"
+                  onClick={() => setQuality(v)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                    quality === v ? "bg-accent text-accent-ink" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
           </div>
 
           <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5">
@@ -87,7 +89,7 @@ export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
               type="checkbox"
               checked={isMusic}
               onChange={(e) => setIsMusic(e.target.checked)}
-              className="h-4 w-4 accent-red-500"
+              className="h-4 w-4 accent-accent"
             />
             <span className="flex items-center gap-1.5 text-sm">
               <ListMusic className="h-4 w-4 text-zinc-400" />
@@ -111,7 +113,7 @@ export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={mut.isPending || !url.trim()}
-              className="flex items-center gap-2 rounded-full bg-zinc-100 px-4 py-1.5 text-sm font-medium text-zinc-950 hover:bg-zinc-200 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full bg-gradient-to-b from-accent to-accent-strong px-4 py-1.5 text-sm font-semibold text-accent-ink shadow-sm shadow-accent/30 hover:shadow-md hover:shadow-accent/40 disabled:opacity-50"
             >
               {mut.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               Download
