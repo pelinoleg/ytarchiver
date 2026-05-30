@@ -16,6 +16,20 @@ export type QueueRecord = {
 const MUSIC_KEY = "music.queue";
 const playlistKey = (id: number) => `playlist.queue.${id}`;
 
+// Global "shuffle music" preference — NOT per playlist. Set once (player toggle
+// or a Shuffle button) and every music play honours it until changed.
+const MUSIC_SHUFFLE_KEY = "music.shuffle";
+
+export function getMusicShuffle(): boolean {
+  try { return window.localStorage.getItem(MUSIC_SHUFFLE_KEY) === "1"; }
+  catch { return false; }
+}
+
+export function setMusicShuffle(on: boolean): void {
+  try { window.localStorage.setItem(MUSIC_SHUFFLE_KEY, on ? "1" : "0"); }
+  catch { /* private mode */ }
+}
+
 export function setMusicQueue(ids: string[], shuffled: boolean): void {
   sessionStorage.setItem(MUSIC_KEY, JSON.stringify({ ids, shuffled } satisfies QueueRecord));
 }

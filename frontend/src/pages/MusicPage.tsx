@@ -10,7 +10,7 @@ import {
   type Playlist, type Video,
 } from "../lib/api";
 import { formatBytes, formatDuration, formatUploadDate, timeAgo } from "../lib/format";
-import { setMusicQueue, shuffleArray } from "../lib/queue";
+import { setMusicQueue, shuffleArray, getMusicShuffle, setMusicShuffle } from "../lib/queue";
 import { VirtualVideoGrid } from "../components/VirtualVideoGrid";
 import { PlaylistStack } from "../components/PlaylistStack";
 import { useDesktopCols } from "../components/DensitySlider";
@@ -72,8 +72,10 @@ export function MusicPage() {
       <MusicHero
         tracks={tracks}
         playlistsCount={playlists.length}
-        onPlayAll={() => playAll(false)}
-        onShuffle={() => playAll(true)}
+        // "Play all" honours the remembered shuffle mode; "Shuffle" forces it
+        // on and remembers that globally.
+        onPlayAll={() => playAll(getMusicShuffle())}
+        onShuffle={() => { setMusicShuffle(true); playAll(true); }}
       />
 
       {isEmpty ? (
@@ -189,7 +191,7 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
       <PlaylistStack accent="bg-yellow-400/35" accentSoft="bg-yellow-400/15">
         <button
           type="button"
-          onClick={() => play(false)}
+          onClick={() => play(getMusicShuffle())}
           className="relative block aspect-video w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-zinc-800/70 text-left transition-all duration-300 group-hover:ring-yellow-400/50 group-hover:shadow-lg group-hover:shadow-yellow-900/30"
           aria-label="Play favorites"
         >
@@ -234,7 +236,7 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
         {/* FABs — bottom-right of cover. */}
         <div className="pointer-events-none absolute right-2 bottom-7 flex items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
           <button
-            onClick={(e) => { e.preventDefault(); play(true); }}
+            onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
             aria-label="Shuffle favorites"
             title="Shuffle"
             className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-zinc-900/90 text-yellow-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
@@ -242,7 +244,7 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
             <Shuffle className="h-4 w-4" />
           </button>
           <button
-            onClick={(e) => { e.preventDefault(); play(false); }}
+            onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
             aria-label="Play favorites"
             title="Play"
             className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-yellow-400 text-yellow-950 shadow-xl shadow-yellow-900/50 hover:bg-yellow-300 active:scale-95 transition-transform"
@@ -476,7 +478,7 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
          *  control, not a tiny chip. */}
         <div className="pointer-events-none absolute right-2 bottom-7 flex items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
           <button
-            onClick={(e) => { e.preventDefault(); startPlaylist(true); }}
+            onClick={(e) => { e.preventDefault(); setMusicShuffle(true); startPlaylist(true); }}
             aria-label="Shuffle play"
             title="Shuffle"
             className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-zinc-900/90 text-fuchsia-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
@@ -484,7 +486,7 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
             <Shuffle className="h-4 w-4" />
           </button>
           <button
-            onClick={(e) => { e.preventDefault(); startPlaylist(false); }}
+            onClick={(e) => { e.preventDefault(); startPlaylist(getMusicShuffle()); }}
             aria-label="Play"
             title="Play"
             className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-fuchsia-500 text-white shadow-xl shadow-fuchsia-900/50 hover:bg-fuchsia-400 active:scale-95 transition-transform"

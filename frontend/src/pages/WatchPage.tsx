@@ -12,6 +12,7 @@ import {
 } from "../lib/format";
 import {
   clearPlaylistQueue, getMusicQueue, getPlaylistQueue, setMusicQueue, setPlaylistQueue, shuffleArray,
+  setMusicShuffle,
 } from "../lib/queue";
 import { useConfirm } from "../components/ConfirmProvider";
 import { VideoPlayer, type PlayerHandle } from "../components/Player/VideoPlayer";
@@ -698,6 +699,9 @@ function QueueContextChip({
     // per-playlist queue.
     if (isMusicSource) {
       setMusicQueue(next, goingOn);
+      // Remember shuffle globally for music — applies to every music playlist
+      // you open next, not just this one.
+      setMusicShuffle(goingOn);
     } else if (goingOn) {
       setPlaylistQueue(playlistId!, next, true);
     } else {
