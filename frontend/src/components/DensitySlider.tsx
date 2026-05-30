@@ -8,7 +8,7 @@ import { useLocalStorageNumber } from "../hooks/useLocalStorageNumber";
  *  columns at every width); a wider window still fits more than a narrow one. */
 export const GRID_CARD_MIN_KEY = "ui.grid.cardMinPx";
 export const CARD_MIN = 150;   // densest — smallest cards
-export const CARD_MAX = 320;   // largest cards
+export const CARD_MAX = 480;   // largest cards
 export const CARD_DEFAULT = 200;
 const STEP = 10;
 
