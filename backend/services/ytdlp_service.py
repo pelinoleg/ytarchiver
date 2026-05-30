@@ -80,9 +80,15 @@ def fetch_playlist_info(url: str) -> dict:
     }
 
 
-def fetch_playlist_videos(url: str, *, max_videos: int = 500) -> list[dict]:
+def fetch_playlist_videos(url: str, *, max_videos: int = 5000) -> list[dict]:
     """List of video entries in playlist order. Flat extract — no per-video
-    metadata fetch — but YouTube playlist entries include channel info."""
+    metadata fetch — but YouTube playlist entries include channel info.
+
+    ``max_videos`` is a high safety ceiling, not a typical limit: flat extract
+    is cheap (one list walk, no per-video fetch), so a multi-thousand-song
+    playlist returns in a few seconds. It used to default to 500, which
+    silently truncated large playlists (a 2800-track playlist only ever saw
+    its first ~480 entries)."""
     opts = {
         "quiet": True, "no_warnings": True,
         "extract_flat": "in_playlist", "skip_download": True,
