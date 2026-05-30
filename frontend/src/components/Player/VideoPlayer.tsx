@@ -1477,7 +1477,7 @@ function Menu({ children, align = "left", width = 160 }: {
 }) {
   return (
     <div
-      className="absolute bottom-12 rounded-lg bg-zinc-900/95 shadow-xl border border-zinc-800 py-1 overflow-y-auto max-h-80"
+      className="absolute bottom-12 rounded-xl bg-zinc-900/95 shadow-2xl shadow-black/50 ring-1 ring-white/10 py-1 overflow-y-auto max-h-80"
       style={{ width, [align]: 0 } as React.CSSProperties}
     >
       {children}
@@ -1556,18 +1556,18 @@ function SpeedPicker({
             width: 132,
             transform: "translateY(-100%)",
           }}
-          className="z-[60] rounded-lg bg-zinc-900/98 shadow-2xl border border-zinc-700 py-1 max-h-[60vh] overflow-y-auto"
+          className="z-[60] rounded-xl bg-zinc-900/98 shadow-2xl shadow-black/50 ring-1 ring-white/10 py-1 max-h-[60vh] overflow-y-auto"
         >
           {SPEEDS.map((s) => (
             <button
               key={s}
               onClick={() => onPick(s)}
-              className={`flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-zinc-800 active:bg-zinc-700 ${
-                rate === s ? "text-zinc-100" : "text-zinc-400"
+              className={`flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-white/5 ${
+                rate === s ? "bg-accent/12 font-semibold text-accent" : "text-zinc-400"
               }`}
             >
               <span>{s}×</span>
-              {rate === s && <span className="text-zinc-100">✓</span>}
+              {rate === s && <span className="text-accent">✓</span>}
             </button>
           ))}
         </div>,
@@ -1665,7 +1665,7 @@ function QualityMenu({
         <div
           data-quality-menu
           style={{ position: "fixed", top: pos.top, left: pos.left, width: 220, transform: "translateY(-100%)" }}
-          className="z-[60] rounded-lg border border-zinc-700 bg-zinc-900/98 py-1 shadow-2xl max-h-[60vh] overflow-y-auto"
+          className="z-[60] rounded-xl ring-1 ring-white/10 bg-zinc-900/98 py-1 shadow-2xl shadow-black/50 max-h-[60vh] overflow-y-auto"
         >
           {/* Available resolutions */}
           {orderedPresent.map((h) => {
@@ -1678,7 +1678,7 @@ function QualityMenu({
               <div
                 key={h}
                 className={`group flex items-center justify-between gap-2 px-3 py-2 text-sm ${
-                  active ? "bg-zinc-800/80" : "hover:bg-zinc-800"
+                  active ? "bg-accent/12" : "hover:bg-white/5"
                 } ${downloading || failed ? "opacity-70" : ""}`}
               >
                 <button
@@ -1689,13 +1689,13 @@ function QualityMenu({
                     setOpen(false);
                   }}
                 >
-                  <span className={active ? "text-zinc-100 font-medium" : "text-zinc-300"}>
+                  <span className={active ? "text-accent font-semibold" : "text-zinc-300"}>
                     {h}p
                   </span>
                   {isPrimary && <span className="text-[10px] text-zinc-500">primary</span>}
                   {downloading && <span className="text-[10px] text-amber-400">downloading…</span>}
                   {failed && <span className="text-[10px] text-red-400">error</span>}
-                  {active && <span className="ml-auto text-zinc-100">✓</span>}
+                  {active && <span className="ml-auto text-accent">✓</span>}
                 </button>
                 {!isPrimary && variant && (
                   <button
@@ -1712,7 +1712,7 @@ function QualityMenu({
 
           {/* Add another */}
           {addable.length > 0 && (
-            <div className="mt-1 border-t border-zinc-800 pt-1">
+            <div className="mt-1 border-t border-white/5 pt-1">
               <p className="px-3 py-1 text-[10px] uppercase tracking-wider text-zinc-500">
                 Download another
               </p>
