@@ -33,7 +33,7 @@ export function TopBar({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center gap-2 bg-zinc-950 px-2 md:px-3"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center gap-2 border-b border-zinc-800/50 bg-zinc-950/70 backdrop-blur-xl px-2 md:px-3"
       style={{
         // iOS standalone: extend the header background up under the status bar
         // and push controls below the notch.
@@ -176,7 +176,7 @@ function AddMenu({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((s) => !s)}
-        className="flex items-center gap-1.5 rounded-full bg-gradient-to-b from-accent to-accent-strong p-2 text-accent-ink shadow-sm shadow-accent/30 transition-shadow hover:shadow-md hover:shadow-accent/40 sm:px-4 sm:py-1.5 text-sm font-semibold"
+        className="flex items-center gap-1.5 rounded-full bg-gradient-to-b from-accent to-accent-strong p-2 text-accent-ink shadow-sm shadow-accent/30 hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:px-4 sm:py-1.5 text-sm font-semibold"
         aria-haspopup="menu"
         aria-expanded={open}
         title="Add new"

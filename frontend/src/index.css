@@ -83,29 +83,43 @@ html, body {
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-               "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Inter Variable", ui-sans-serif, system-ui, -apple-system,
+               BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  font-feature-settings: "kern", "liga", "calt";
+  /* Inter character: contextual alternates + the single-story 'a' (cv11) and
+     disambiguated 1/i/l (cv01) read cleaner in dense UI. */
+  font-feature-settings: "kern", "liga", "calt", "cv01", "cv11";
+  letter-spacing: -0.006em;
   color: var(--color-zinc-100);
-  /* Ambient apricot bloom across the top of the page — the soft glow the
-     references lean on. Whisper-soft (≈8%) and anchored near the top so it
-     warms the content area under the (solid) top bar without tinting reading. */
+  /* Solid base — the ambient apricot bloom is a separate full-viewport layer
+     in Layout so it reads continuously behind the (translucent) chrome instead
+     of seaming against it. */
   background-color: var(--color-zinc-950);
-  background-image: radial-gradient(
-    1100px 520px at 50% -160px,
-    color-mix(in oklab, var(--color-accent) 8%, transparent),
-    transparent 68%
-  );
-  background-repeat: no-repeat;
 }
 
 /* Themed text selection — the red accent at low alpha, warm ink on top. */
 ::selection {
   background-color: color-mix(in oklab, var(--color-red-500) 32%, transparent);
   color: var(--color-zinc-100);
+}
+
+/* Tactile micro-interactions: buttons ease their colour/shadow/transform and
+   dip slightly on press, so hovers and taps feel responsive instead of abrupt.
+   Fully disabled under reduced-motion. Components can still add their own
+   hover transforms on top. */
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled),
+  a[role="button"],
+  [role="tab"] {
+    transition: color .15s ease, background-color .15s ease,
+                box-shadow .2s ease, transform .12s cubic-bezier(.2, .8, .2, 1),
+                opacity .15s ease;
+  }
+  button:not(:disabled):active {
+    transform: scale(0.97);
+  }
 }
 
 /* Hide focus rings unless keyboard-navigating */

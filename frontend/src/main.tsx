@@ -6,6 +6,7 @@ import App from "./App";
 import { ConfirmProvider } from "./components/ConfirmProvider";
 import { SelectionProvider } from "./components/SelectionProvider";
 import { MiniPlayerProvider } from "./components/MiniPlayerProvider";
+import "@fontsource-variable/inter";
 import "./index.css";
 
 const qc = new QueryClient({

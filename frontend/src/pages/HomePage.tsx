@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Tv, History as HistoryIcon, ChevronDown, ChevronUp, Inbox, Clapperboard } from "lucide-react";
+import { Tv, History as HistoryIcon, ChevronDown, ChevronUp, Inbox } from "lucide-react";
 import { channelsApi, historyApi, videosApi, thumbUrl, type Channel, type Video } from "../lib/api";
 import { VideoGrid } from "../components/VideoGrid";
 import { VideoCard } from "../components/VideoCard";
@@ -36,29 +36,9 @@ export function HomePage() {
 
   return (
     <>
-      {/* Header — a quiet branded anchor with a soft apricot bloom. Gives the
-          page (and screen readers) a real <h1>, matching the design language. */}
-      <header className="relative mb-8 sm:mb-10">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-24 -left-6 h-44 w-80 rounded-full bg-accent/10 blur-3xl"
-        />
-        <div className="relative flex items-center gap-3.5">
-          <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-strong text-accent-ink shadow-lg shadow-accent/25">
-            <Clapperboard className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100 [text-wrap:balance]">
-              Your archive
-            </h1>
-            <p className="mt-0.5 text-sm text-zinc-400">
-              {channels.length > 0
-                ? `${channels.length} ${channels.length === 1 ? "channel" : "channels"}`
-                : "Subscriptions land here automatically"}
-            </p>
-          </div>
-        </div>
-      </header>
+      {/* Content-first: no visible title (it just ate space). The ambient
+          bloom lives globally in Layout. Keep an sr-only <h1> as the landmark. */}
+      <h1 className="sr-only">Home — your video archive</h1>
       <ContinueWatching videos={continueWatching} />
       {mode === "flat" ? (
         <VideoGrid

@@ -102,7 +102,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         // ``z-50`` (above BottomNav's z-40) so the drawer covers the bar
         // entirely when open — otherwise its bottom items would be hidden
         // under the bar on phone / tablet.
-        className={`fixed bottom-0 left-0 z-50 w-70 flex flex-col bg-zinc-950
+        className={`fixed bottom-0 left-0 z-50 w-70 flex flex-col border-r border-zinc-800/50 bg-zinc-950/70 backdrop-blur-xl
           transition-transform duration-200 ease-out safe-bottom
           ${open ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
         style={{ top: "var(--header-safe-top)" }}

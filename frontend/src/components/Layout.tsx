@@ -47,6 +47,17 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      {/* Ambient apricot bloom — one full-viewport, fixed layer behind
+          everything (incl. the translucent top bar / sidebar) so the glow
+          reads continuously instead of seaming against solid chrome. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(1200px 620px at 50% -160px, color-mix(in oklab, var(--color-accent) 11%, transparent), transparent 60%)",
+        }}
+      />
       <TopBar
         onAddChannel ={() => setAddOpen(true)}
         onAddPlaylist={() => { setPlMode("url");    setPlOpen(true); }}
