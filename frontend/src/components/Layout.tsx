@@ -57,9 +57,11 @@ export function Layout() {
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10"
         style={{
+          // Single, very soft top glow. The bright core sits ABOVE the
+          // viewport (-340px) so only the smooth falloff shows in-page — an
+          // even warm wash, not a visible blob/splotch.
           background:
-            "radial-gradient(1000px 540px at 50% -20px, color-mix(in oklab, var(--color-accent) 26%, transparent), transparent 55%)," +
-            "radial-gradient(720px 520px at 106% 4%, color-mix(in oklab, var(--color-accent) 16%, transparent), transparent 52%)",
+            "radial-gradient(1500px 820px at 50% -360px, color-mix(in oklab, var(--color-accent) 30%, transparent), transparent 60%)",
         }}
       />
       <TopBar

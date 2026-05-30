@@ -116,7 +116,7 @@ function PlaylistCard({ playlist: p }: { playlist: Playlist }) {
        *  isn't just a video. Combined with the upper-left PLAYLIST pill,
        *  it's unmistakable at a glance. */}
       <PlaylistStack>
-        <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-zinc-800/70 transition-all duration-300 group-hover:ring-zinc-600 group-hover:shadow-lg group-hover:shadow-black/40">
+        <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:ring-1 group-hover:ring-accent/40 group-hover:shadow-lg group-hover:shadow-black/40">
           {p.thumbnail_url ? (
             <img
               src={p.thumbnail_url}

@@ -64,7 +64,7 @@ export function StoragePage() {
         {channels.length === 0 ? (
           <p className="text-sm text-zinc-500">No data yet — download some videos first.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl ring-1 ring-zinc-800">
+          <div className="overflow-hidden rounded-xl shadow-md shadow-black/25">
             {channels.map((c, i) => <ChannelRow key={c.id} c={c} rank={i + 1} totalBytes={summary?.total_bytes ?? 0} />)}
           </div>
         )}
@@ -154,7 +154,7 @@ function ChannelRow({
   return (
     <Link
       to={`/channel/${c.id}`}
-      className="group relative flex items-center gap-3 border-b border-zinc-800 bg-zinc-900 px-3 py-2.5 last:border-b-0 hover:bg-zinc-800/70"
+      className="group relative flex items-center gap-3 border-b border-white/5 bg-zinc-900 px-3 py-2.5 last:border-b-0 hover:bg-zinc-800/70"
     >
       <span className="w-6 flex-shrink-0 text-right text-xs font-mono tabular-nums text-zinc-500">{rank}</span>
       {c.thumbnail_url ? (
@@ -306,7 +306,7 @@ function MusicPlaylistRow({ p, maxBytes }: { p: MusicPlaylistSize; maxBytes: num
   return (
     <Link
       to={`/playlist/${p.id}`}
-      className="group flex items-center gap-3 rounded-xl bg-zinc-900/70 px-3 py-2.5 ring-1 ring-zinc-800/70 hover:bg-zinc-800/70"
+      className="group flex items-center gap-3 rounded-xl bg-zinc-900/70 px-3 py-2.5 hover:bg-zinc-800/70"
     >
       {p.thumbnail_url ? (
         <img src={p.thumbnail_url} referrerPolicy="no-referrer" loading="lazy" className="h-9 w-9 flex-shrink-0 rounded-lg object-cover bg-zinc-800" alt="" />
@@ -348,7 +348,7 @@ function IntegritySection() {
   const lastReport = run.data ?? null;
 
   return (
-    <section className="rounded-2xl bg-zinc-900 p-4 sm:p-5 ring-1 ring-zinc-800">
+    <section className="rounded-2xl bg-zinc-900 p-4 sm:p-5 shadow-md shadow-black/25">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-semibold text-zinc-100">
@@ -446,7 +446,7 @@ function AnalyticsSection() {
       <SectionHeader icon={HardDrive} title="Activity & breakdown" />
       <div className="grid gap-4 sm:gap-5 grid-cols-1 lg:grid-cols-2">
         {/* Growth chart */}
-        <div className="rounded-xl bg-zinc-900 p-4 ring-1 ring-zinc-800">
+        <div className="rounded-xl bg-zinc-900 p-4 shadow-md shadow-black/25">
           <h3 className="text-sm font-semibold text-zinc-100">Downloaded — last 12 weeks</h3>
           <p className="mt-0.5 text-xs text-zinc-500">
             Bytes added to disk per ISO-week. Helps you spot a sudden growth spike.
@@ -475,7 +475,7 @@ function AnalyticsSection() {
         </div>
 
         {/* Resolution breakdown */}
-        <div className="rounded-xl bg-zinc-900 p-4 ring-1 ring-zinc-800">
+        <div className="rounded-xl bg-zinc-900 p-4 shadow-md shadow-black/25">
           <h3 className="text-sm font-semibold text-zinc-100">By resolution</h3>
           <p className="mt-0.5 text-xs text-zinc-500">
             Videos &gt; 1080p are served only as VP9 / AV1 — useful to know for

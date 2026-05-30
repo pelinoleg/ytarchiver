@@ -200,7 +200,7 @@ export function ImportReviewModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3 sm:px-5">
+        <div className="flex items-center justify-between border-b border-white/5 px-4 py-3 sm:px-5">
           <h2 className="flex items-center gap-2 text-base font-semibold">
             <Upload className="h-5 w-5" />
             Review import
@@ -211,7 +211,7 @@ export function ImportReviewModal({
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 border-b border-zinc-800 px-2 sm:px-4 overflow-x-auto">
+        <div className="flex items-center gap-1 border-b border-white/5 px-2 sm:px-4 overflow-x-auto">
           <Tab active={tab === "channels"}  onClick={() => setTab("channels")}>
             Channels <Pill n={chCount} total={channels.length} />
           </Tab>

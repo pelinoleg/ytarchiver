@@ -103,7 +103,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         // entirely when open — otherwise its bottom items would be hidden
         // under the bar on phone / tablet.
         className={`fixed bottom-0 left-0 z-50 w-70 flex flex-col bg-zinc-950/70 backdrop-blur-xl
-          shadow-[10px_0_40px_-24px_rgba(0,0,0,0.9)]
+          shadow-[1px_0_0_0_color-mix(in_oklab,var(--color-zinc-100)_6%,transparent)]
           transition-transform duration-200 ease-out safe-bottom
           ${open ? "translate-x-0" : "-translate-x-full"} xl:translate-x-0`}
         style={{ top: "var(--header-safe-top)" }}

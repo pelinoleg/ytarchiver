@@ -347,7 +347,7 @@ function ChannelSettings({
       {open && (
         <div className="border-t border-zinc-800">
           {isLegacy && (
-            <div className="flex items-start gap-2 border-b border-zinc-800 bg-amber-500/10 px-4 py-3 text-xs text-amber-300 sm:px-5">
+            <div className="flex items-start gap-2 border-b border-white/5 bg-amber-500/10 px-4 py-3 text-xs text-amber-300 sm:px-5">
               <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
               <div>
                 Этот канал добавлен до того, как мы стали хранить политику.

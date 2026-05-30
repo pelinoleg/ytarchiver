@@ -68,7 +68,7 @@ export function PlaylistPage() {
   return (
     <>
       {/* Hero — blurred playlist cover as background + frosted-glass card. */}
-      <header className="relative mb-6 overflow-hidden rounded-3xl ring-1 ring-zinc-800 shadow-lg shadow-black/40">
+      <header className="relative mb-6 overflow-hidden rounded-3xl shadow-lg shadow-black/40">
         <div className="absolute inset-0">
           {playlist.thumbnail_url ? (
             <img

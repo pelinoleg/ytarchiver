@@ -311,7 +311,7 @@ function Section({
 }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <section className="overflow-hidden rounded-2xl bg-zinc-900">
-      <div className="border-b border-zinc-800 px-4 py-3 sm:px-5">
+      <div className="border-b border-white/5 px-4 py-3 sm:px-5">
         <h2 className="text-sm font-semibold">{title}</h2>
         {subtitle && <p className="mt-0.5 text-xs text-zinc-500">{subtitle}</p>}
       </div>
@@ -482,7 +482,7 @@ function BackupSection() {
 
   return (
     <section className="overflow-hidden rounded-2xl bg-zinc-900">
-      <div className="border-b border-zinc-800 px-4 py-3 sm:px-5">
+      <div className="border-b border-white/5 px-4 py-3 sm:px-5">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           <ShieldCheck className="h-4 w-4 text-zinc-500" />
           Backup
