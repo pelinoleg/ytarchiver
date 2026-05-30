@@ -669,39 +669,44 @@ function QueueContextChip({
   async function toggleShuffle() {
     const goingOn = !isShuffled;
 
-    if (isMusicSource) {
+    // The set of tracks the queue should contain + their natural (un-shuffled)
+    // order. CRITICAL: when a specific playlist is playing — even inside the
+    // music context — that's the playlist's tracks, NOT the whole music
+    // library. The old code always pulled every music track here, which is how
+    // a 20-song playlist ballooned to the full library the moment you toggled
+    // shuffle. Only the library-wide music queue (no playlist) uses trackIds().
+    let baseOrder: string[];
+    if (isMusicSource && !playlistId) {
       const { video_ids } = await musicApi.trackIds();
-      if (!video_ids.length) return;
-      const idx = video_ids.indexOf(videoId);
-      const base = idx >= 0
-        ? [...video_ids.slice(idx), ...video_ids.slice(0, idx)]
-        : video_ids;
-      const next = goingOn
-        ? [videoId, ...shuffleArray(base.slice(1))]
-        : base;
+      baseOrder = video_ids;
+    } else {
+      baseOrder = playlistVideos.filter((v) => v.status === "done").map((v) => v.video_id);
+    }
+    if (!baseOrder.length) return;
+
+    // Rotate the natural order to start at the current track (so turning
+    // shuffle OFF keeps playing forward from here); when turning it ON, pin the
+    // current track first and shuffle the rest.
+    const idx = baseOrder.indexOf(videoId);
+    const rotated = idx >= 0 ? [...baseOrder.slice(idx), ...baseOrder.slice(0, idx)] : baseOrder;
+    const next = goingOn ? [videoId, ...shuffleArray(rotated.slice(1))] : rotated;
+
+    // Persist into whichever queue WatchPage reads for this context: the music
+    // queue wins whenever source=music (even with a playlist), otherwise the
+    // per-playlist queue.
+    if (isMusicSource) {
       setMusicQueue(next, goingOn);
-      const params = new URLSearchParams({ source: "music" });
-      if (playlistId)  params.set("playlist", String(playlistId));
-      if (goingOn)     params.set("shuffle",  "1");
-      nav(`/watch/${videoId}?${params.toString()}`, { replace: true });
-      return;
+    } else if (goingOn) {
+      setPlaylistQueue(playlistId!, next, true);
+    } else {
+      clearPlaylistQueue(playlistId!);
     }
 
-    if (playlistId) {
-      const ids = playlistVideos
-        .filter((v) => v.status === "done")
-        .map((v) => v.video_id);
-      if (!ids.length) return;
-      if (goingOn) {
-        const without = ids.filter((id) => id !== videoId);
-        setPlaylistQueue(playlistId, [videoId, ...shuffleArray(without)], true);
-      } else {
-        clearPlaylistQueue(playlistId);
-      }
-      const params = new URLSearchParams({ playlist: String(playlistId) });
-      if (goingOn) params.set("shuffle", "1");
-      nav(`/watch/${videoId}?${params.toString()}`, { replace: true });
-    }
+    const params = new URLSearchParams();
+    if (isMusicSource) params.set("source", "music");
+    if (playlistId)    params.set("playlist", String(playlistId));
+    if (goingOn)       params.set("shuffle", "1");
+    nav(`/watch/${videoId}?${params.toString()}`, { replace: true });
   }
 
   const cls = isMusicSource
