@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { HomeViewToggle } from "./HomeViewToggle";
 import { CompactToggle } from "./CompactToggle";
+import { DensitySlider } from "./DensitySlider";
 
 interface TopBarProps {
   onAddChannel: () => void;
@@ -119,6 +120,9 @@ export function TopBar({
 
         {/* Mobile-only: compact toggle for all thumbnail grids. */}
         <CompactToggle />
+
+        {/* Desktop-only: card-size slider for all thumbnail grids. */}
+        <DensitySlider />
 
         {onHome && <HomeViewToggle />}
 

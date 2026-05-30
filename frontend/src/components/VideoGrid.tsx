@@ -1,9 +1,11 @@
 import { Inbox } from "lucide-react";
+import type { CSSProperties } from "react";
 import type { Video } from "../lib/api";
 import { VideoCard } from "./VideoCard";
 import { VirtualVideoGrid } from "./VirtualVideoGrid";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
 import { COMPACT_MOBILE_KEY } from "./CompactToggle";
+import { useDesktopCols } from "./DensitySlider";
 
 /** Above this count switch to a windowed virtual grid — keeps DOM cost
  *  flat regardless of how many videos are in the library. */
@@ -18,26 +20,31 @@ export function VideoGrid({
   emptyHint: string;
 }) {
   const [compact] = useLocalStorageBool(COMPACT_MOBILE_KEY, false);
+  // Desktop card density — columns at ≥lg widths, user-controlled via the
+  // TopBar slider. Cards stay fluid (1fr) so the window can still be resized.
+  const [desktopCols] = useDesktopCols();
 
   // Mobile column count = 2 when "compact" toggle is on, otherwise 1.
   const mobileCols  = compact ? 2 : 1;
-  // Tablet-landscape (≥1024) gets one more column than before because the
-  // sidebar is auto-collapsed below xl, freeing the room.
+  // Mobile/tablet from these fixed breakpoints; desktop (≥1024) is overridden
+  // by ``desktopCols`` (the slider) in both render paths below.
   const breakpoints = [
     { width:    0, cols: mobileCols },
     { width:  640, cols: 2 },
-    { width: 1024, cols: 4 },
-    { width: 1280, cols: 4 },
-    { width: 1536, cols: 5 },
+    { width: 1024, cols: desktopCols },
   ];
-  // Tailwind class mirroring `breakpoints` for the non-virtualized path.
+  // Tailwind class for the non-virtualized path. The desktop track uses an
+  // arbitrary grid-template-columns backed by the ``--cols`` CSS var so the
+  // count is dynamic while cards remain ``1fr`` (proportional on resize).
+  const desktopGrid = "lg:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]";
   const gridClass = compact
-    ? "grid gap-x-3 gap-y-8 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5"
-    : "grid gap-x-4 gap-y-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5";
+    ? `grid gap-x-3 gap-y-8 grid-cols-2 sm:grid-cols-2 ${desktopGrid}`
+    : `grid gap-x-4 gap-y-8 grid-cols-1 sm:grid-cols-2 ${desktopGrid}`;
+  const gridStyle = { "--cols": desktopCols } as CSSProperties;
 
   if (isLoading) {
     return (
-      <div className={gridClass}>
+      <div className={gridClass} style={gridStyle}>
         {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
       </div>
     );
@@ -68,7 +75,7 @@ export function VideoGrid({
     );
   }
   return (
-    <div className={gridClass}>
+    <div className={gridClass} style={gridStyle}>
       {videos.map((v) => <VideoCard key={v.id} video={v} />)}
     </div>
   );
