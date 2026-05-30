@@ -96,6 +96,9 @@ def fetch_playlist_videos(url: str, *, max_videos: int = 500) -> list[dict]:
     for i, e in enumerate(entries):
         if not e or not e.get("id"):
             continue
+        if _is_unavailable_entry(e):
+            log.info("playlist: skipping unavailable entry %s (%r)", e.get("id"), e.get("title"))
+            continue
         out.append({
             "id":             e["id"],
             "title":          e.get("title") or "Untitled",
@@ -188,6 +191,9 @@ def fetch_channel_videos_flat(
     videos: list[dict] = []
     for e in entries:
         if not e or not e.get("id"):
+            continue
+        if _is_unavailable_entry(e):
+            log.info("channel: skipping unavailable entry %s (%r)", e.get("id"), e.get("title"))
             continue
         videos.append({
             "id": e["id"],
@@ -294,6 +300,37 @@ def _pick_thumbnail(entry: dict) -> Optional[str]:
     if thumbs:
         return thumbs[-1].get("url") or thumbs[0].get("url")
     return entry.get("thumbnail")
+
+
+# Placeholder titles yt-dlp uses for entries that can no longer be watched.
+# In flat extract these still carry a real-looking video id, so id presence
+# alone can't tell them apart from live videos — the title/availability does.
+_UNAVAILABLE_TITLES = frozenset({
+    "[deleted video]",
+    "[private video]",
+    "[unavailable video]",
+})
+_UNAVAILABLE_AVAILABILITY = frozenset({
+    "private",
+    "needs_auth",
+})
+
+
+def _is_unavailable_entry(entry: dict) -> bool:
+    """True for deleted/private/unavailable playlist or channel entries.
+
+    YouTube keeps these as placeholder rows inside a playlist; yt-dlp surfaces
+    them with a bracketed marker title and no real metadata. We never want them
+    in the library — they only clutter playlists and can never be downloaded.
+    """
+    if not entry:
+        return True
+    title = (entry.get("title") or "").strip().lower()
+    if title in _UNAVAILABLE_TITLES:
+        return True
+    if entry.get("availability") in _UNAVAILABLE_AVAILABILITY:
+        return True
+    return False
 
 
 def _is_shorts_entry(entry: dict) -> bool:
