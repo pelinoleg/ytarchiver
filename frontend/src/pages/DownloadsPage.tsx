@@ -294,13 +294,10 @@ function WaitingGroups({ items }: { items: Video[] }) {
   })();
 
   // First group expanded by default, rest collapsed. User toggles override the
-  // default and are keyed by group id, so they survive the 3s refetch.
+  // default and are keyed by group id, so they survive the 3s refetch. We
+  // always render the group header (even for a single group) so the playlist
+  // name + download-progress bar stay visible.
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
-
-  if (groups.length === 1) {
-    // No accordion chrome for a single group — just show its (capped) rows.
-    return <GroupRows items={groups[0].items} to={`/${groups[0].kind === "playlist" ? "playlist" : "channel"}/${groups[0].id}`} />;
-  }
 
   return (
     <div className="space-y-2">

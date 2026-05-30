@@ -500,6 +500,7 @@ export function WatchPage() {
                 <QueueContextChip
                   isMusicSource={isMusicSource}
                   playlistId={playlistId}
+                  playlistTitle={playlistInfo?.title}
                   isShuffled={isShuffled}
                   videoId={videoId ?? ""}
                   playlistVideos={playlistVideos}
@@ -656,10 +657,11 @@ export function WatchPage() {
  * to the originating page. */
 
 function QueueContextChip({
-  isMusicSource, playlistId, isShuffled, videoId, playlistVideos,
+  isMusicSource, playlistId, playlistTitle, isShuffled, videoId, playlistVideos,
 }: {
   isMusicSource: boolean;
   playlistId: number | null;
+  playlistTitle?: string;
   isShuffled: boolean;
   videoId: string;
   playlistVideos: Video[];
@@ -710,27 +712,33 @@ function QueueContextChip({
   }
 
   const cls = isMusicSource
-    ? { bg: "bg-fuchsia-500/15", text: "text-fuchsia-300", btnOn: "bg-fuchsia-500/30 text-fuchsia-100", btnOff: "text-fuchsia-300/60 hover:text-fuchsia-200" }
-    : { bg: "bg-sky-500/15",     text: "text-sky-300",     btnOn: "bg-sky-500/30 text-sky-100",         btnOff: "text-sky-300/60 hover:text-sky-200" };
+    ? { bg: "bg-fuchsia-500/15", text: "text-fuchsia-300", btnOn: "bg-fuchsia-500 text-white", btnOff: "bg-black/20 text-fuchsia-300/70 hover:text-fuchsia-100" }
+    : { bg: "bg-sky-500/15",     text: "text-sky-300",     btnOn: "bg-sky-500 text-white",     btnOff: "bg-black/20 text-sky-300/70 hover:text-sky-100" };
+
+  // What's actually playing — name the source so "Music queue" isn't mistaken
+  // for a mode. A playlist (even inside music mode) shows its title.
+  const label = playlistTitle ?? (isMusicSource ? "Музыка" : "Плейлист");
 
   return (
-    <div className={`mt-2 inline-flex items-center gap-1 rounded-full ${cls.bg} px-2 py-1 text-xs font-medium ${cls.text}`}>
-      <span className="inline-flex items-center gap-1.5 pl-1">
+    <div className={`mt-2 inline-flex max-w-full items-center gap-2 rounded-full ${cls.bg} py-1 pl-2.5 pr-1 text-xs font-medium ${cls.text}`}>
+      <span className="inline-flex min-w-0 items-center gap-1.5" title={label}>
         {isMusicSource
-          ? <><Music    className="h-3.5 w-3.5" /> Music queue</>
-          : <><ListMusic className="h-3.5 w-3.5" /> Playlist</>}
+          ? <Music className="h-3.5 w-3.5 flex-shrink-0" />
+          : <ListMusic className="h-3.5 w-3.5 flex-shrink-0" />}
+        <span className="truncate">{label}</span>
       </span>
+      <span className="opacity-40" aria-hidden>·</span>
       <button
         type="button"
         onClick={toggleShuffle}
-        title={isShuffled ? "Turn shuffle off" : "Shuffle"}
+        title={isShuffled ? "Перемешивание включено — нажми, чтобы выключить" : "Перемешать порядок воспроизведения"}
         aria-pressed={isShuffled}
-        className={`ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 transition-colors ${
+        className={`inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 font-semibold transition-colors ${
           isShuffled ? cls.btnOn : cls.btnOff
         }`}
       >
         <Shuffle className="h-3.5 w-3.5" />
-        {isShuffled ? "on" : "off"}
+        Shuffle {isShuffled ? "On" : "Off"}
       </button>
     </div>
   );
