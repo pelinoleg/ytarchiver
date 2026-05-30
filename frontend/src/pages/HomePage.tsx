@@ -76,13 +76,13 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
       <button
         type="button"
         onClick={() => setOpenDesktop(!openDesktop)}
-        className="hidden sm:flex w-full items-center gap-2.5 px-5 py-3 text-left hover:bg-zinc-900/40 transition-colors"
+        className="hidden sm:flex w-full items-center gap-2.5 px-4 py-2 text-left hover:bg-white/5 transition-colors"
         aria-expanded={openDesktop}
       >
-        <div className="grid h-7 w-7 place-items-center rounded-full bg-accent/15 ring-1 ring-accent/30">
-          <HistoryIcon className="h-4 w-4 text-accent" />
+        <div className="grid h-6 w-6 place-items-center rounded-full bg-accent/15 ring-1 ring-accent/30">
+          <HistoryIcon className="h-3.5 w-3.5 text-accent" />
         </div>
-        <h2 className="text-base font-semibold text-zinc-100">Continue watching</h2>
+        <h2 className="text-sm font-semibold text-zinc-100">Continue watching</h2>
         <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs font-semibold text-accent tabular-nums">
           {videos.length}
         </span>

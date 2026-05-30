@@ -114,13 +114,13 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
             (the top bar drops its logo there). */}
         <Link
           to="/"
-          className="hidden xl:flex flex-shrink-0 items-center gap-2.5 px-4 pt-4 pb-3 text-lg font-bold tracking-tight text-zinc-100 hover:opacity-90"
+          className="group hidden xl:flex flex-shrink-0 items-center gap-2.5 mx-2 mt-3 mb-1 rounded-xl px-2.5 py-2 text-lg font-bold tracking-tight text-zinc-100 transition-colors hover:bg-white/5"
           aria-label="Home"
         >
-          <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg bg-red-600 shadow-sm">
+          <span className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg bg-red-600 shadow-sm transition-transform group-hover:scale-105 group-hover:shadow-md group-hover:shadow-red-900/40">
             <span className="block h-0 w-0 border-y-[5px] border-y-transparent border-l-[8px] border-l-white ml-0.5" />
           </span>
-          <span>YT Archive</span>
+          <span className="transition-colors group-hover:text-white">YT Archive</span>
         </Link>
         {/* Top: primary nav — what you actually open every session. Music
          *  is split into its own labelled section since it gets its own
@@ -484,8 +484,8 @@ function CountChip({
   return (
     <span className="relative ml-auto inline-block" title={dot ? dotTitle : undefined}>
       <span
-        className={`block rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums ${
-          highlight ? "bg-red-600 text-white" : "bg-zinc-800 text-zinc-300"
+        className={`block rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+          highlight ? "bg-red-600 text-white" : "bg-accent/12 text-accent"
         }`}
       >
         {n}

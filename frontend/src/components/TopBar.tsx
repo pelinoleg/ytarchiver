@@ -22,6 +22,9 @@ export function TopBar({
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const [q, setQ] = useState(() => searchParams.get("q") ?? "");
+  // Search is rarely used → collapsed to an icon by default, expands to a field
+  // on click. Opens automatically when already on the search page.
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     if (location.pathname === "/search") setQ(searchParams.get("q") ?? "");
@@ -79,31 +82,47 @@ export function TopBar({
         </Link>
       </div>
 
-      {/* Center: search bar — centered between left group and right group on desktop. */}
+      {/* Center: collapsed to a search icon by default; expands into a field on
+          click (search is rarely used, so it shouldn't dominate the bar). */}
       <div className="hidden sm:flex flex-1 justify-center mx-4 md:mx-8 lg:mx-12">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const trimmed = q.trim();
-            if (trimmed) navigate(`/search?q=${encodeURIComponent(trimmed)}`);
-          }}
-          className="flex w-full max-w-2xl"
-        >
-          <input
-            type="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title, description, channel, chapters…"
-            className="flex-1 min-w-0 rounded-l-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm placeholder:text-zinc-500 focus:border-zinc-600"
-          />
-          <button
-            type="submit"
-            className="rounded-r-full border border-l-0 border-zinc-800 bg-zinc-800 px-5 hover:bg-zinc-700"
-            aria-label="Search"
+        {searchOpen ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const trimmed = q.trim();
+              if (trimmed) navigate(`/search?q=${encodeURIComponent(trimmed)}`);
+            }}
+            className="flex w-full max-w-xl"
           >
-            <Search className="h-5 w-5" />
+            <input
+              autoFocus
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onBlur={() => { if (!q.trim()) setSearchOpen(false); }}
+              onKeyDown={(e) => { if (e.key === "Escape") setSearchOpen(false); }}
+              placeholder="Search title, description, channel, chapters…"
+              className="flex-1 min-w-0 rounded-l-full bg-zinc-800/80 px-4 py-2 text-sm placeholder:text-zinc-500 ring-1 ring-white/10 focus:ring-accent/50"
+            />
+            <button
+              type="submit"
+              className="rounded-r-full bg-accent px-5 text-accent-ink hover:bg-accent-strong"
+              aria-label="Search"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search"
+            className="flex items-center gap-2 rounded-full bg-white/5 px-3.5 py-2 text-sm text-zinc-400 ring-1 ring-white/10 hover:bg-white/10 hover:text-zinc-200"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden md:inline">Search</span>
           </button>
-        </form>
+        )}
       </div>
 
       {/* Right group: search-icon (mobile), home toggle (only on /), add

@@ -39,7 +39,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       <h1 className="mb-1 text-2xl font-semibold tracking-tight">Настройки</h1>
       <p className="mb-6 text-sm text-zinc-400">
         Глобальные дефолты для всех каналов. Каждый канал может переопределить качество,
@@ -50,6 +50,10 @@ export function SettingsPage() {
         className="space-y-5"
         onSubmit={(e) => { e.preventDefault(); if (form) mut.mutate(form); }}
       >
+        {/* Compact config sections sit in two columns on desktop so the page
+            isn't one tall vertical sheet; the detail-heavy sections below
+            (shortcuts, gestures, SponsorBlock, advanced, backup) stay full-width. */}
+        <div className="grid items-start gap-5 lg:grid-cols-2">
         <Section title="Загрузка" subtitle="Что и в каком качестве качать.">
           <Row
             label="Качество по умолчанию"
@@ -187,6 +191,7 @@ export function SettingsPage() {
             />
           </Row>
         </Section>
+        </div>
 
         <Section
           title="Горячие клавиши плеера"
