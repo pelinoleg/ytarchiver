@@ -188,7 +188,7 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
                     type="button"
                     onClick={() => { if (newFolderName.trim()) createFolderMut.mutate(newFolderName.trim()); }}
                     disabled={createFolderMut.isPending || !newFolderName.trim()}
-                    className="rounded-full bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-950 hover:bg-zinc-200 disabled:opacity-60"
+                    className="rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-strong disabled:opacity-60"
                   >
                     Create
                   </button>
@@ -201,21 +201,36 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
                   </button>
                 </div>
               ) : (
-                <select
-                  value={folderId == null ? "" : folderId === -1 ? "__new__" : String(folderId)}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "__new__") { setCreatingFolder(true); return; }
-                    setFolderId(v === "" ? null : Number(v));
-                  }}
-                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-600"
-                >
-                  <option value="">Ungrouped (top of sidebar)</option>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setFolderId(null)}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                      folderId == null ? "bg-accent text-accent-ink" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                    }`}
+                  >
+                    Ungrouped
+                  </button>
                   {folders.map((f) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFolderId(f.id)}
+                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                        folderId === f.id ? "bg-accent text-accent-ink" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                      }`}
+                    >
+                      {f.name}
+                    </button>
                   ))}
-                  <option value="__new__">+ New folder…</option>
-                </select>
+                  <button
+                    type="button"
+                    onClick={() => setCreatingFolder(true)}
+                    className="rounded-full px-3 py-1.5 text-sm font-medium text-accent ring-1 ring-accent/40 hover:bg-accent/10"
+                  >
+                    + New
+                  </button>
+                </div>
               )}
             </div>
           </div>

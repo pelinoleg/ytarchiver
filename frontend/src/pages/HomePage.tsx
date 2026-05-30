@@ -140,7 +140,7 @@ function ContinueWatching({ videos }: { videos: Video[] }) {
 function ContinueRow({ videos }: { videos: Video[] }) {
   return (
     <div className="overflow-x-auto scrollbar-hide">
-      <div className="flex gap-3 sm:gap-4 snap-x snap-mandatory px-3 pb-3 pt-1 sm:px-4">
+      <div className="flex gap-3 sm:gap-4 snap-x snap-mandatory px-3 pb-3 pt-0 sm:px-4">
         {videos.map((v) => (
           <Link
             key={v.id}
