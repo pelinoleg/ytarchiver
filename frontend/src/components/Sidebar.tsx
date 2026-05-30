@@ -144,8 +144,13 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
 
           <hr className="my-2 sm:my-3 border-zinc-800" />
 
-          <h4 className="px-6 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          <h4 className="flex items-baseline gap-2 px-6 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
             Music
+            {musicStats && musicStats.total_bytes > 0 && (
+              <span className="ml-auto font-normal normal-case tracking-normal text-zinc-500 tabular-nums">
+                {formatBytes(musicStats.total_bytes)}
+              </span>
+            )}
           </h4>
           <nav className="px-3">
             <SidebarLink
@@ -228,6 +233,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
           stats={stats}
           playlistsCount={playlists.length}
           musicTracks={musicStats?.tracks ?? 0}
+          musicBytes={musicStats?.total_bytes ?? 0}
           favoritesCount={favoriteCount?.count ?? 0}
           manualCount={manualCount?.count ?? 0}
         />
@@ -587,11 +593,12 @@ function CompactPauseResumeIcon() {
 // with the most relevant numbers. Open shows the full breakdown.
 
 function StatsFooter({
-  stats, playlistsCount, musicTracks, favoritesCount, manualCount,
+  stats, playlistsCount, musicTracks, musicBytes, favoritesCount, manualCount,
 }: {
   stats: { channels: number; videos: number; total_bytes: number } | undefined;
   playlistsCount: number;
   musicTracks:    number;
+  musicBytes:     number;
   favoritesCount: number;
   manualCount:    number;
 }) {
@@ -628,7 +635,10 @@ function StatsFooter({
               <dt className="text-zinc-500">Playlists</dt>
               <dd className="text-right text-zinc-200 tabular-nums">{playlistsCount}</dd>
               <dt className="text-zinc-500">Music</dt>
-              <dd className="text-right text-zinc-200 tabular-nums">{formatCount(musicTracks)}</dd>
+              <dd className="text-right text-zinc-200 tabular-nums">
+                {formatCount(musicTracks)}
+                {musicBytes > 0 && <span className="text-zinc-500"> · {formatBytes(musicBytes)}</span>}
+              </dd>
               <dt className="text-zinc-500">Favorites</dt>
               <dd className="text-right text-zinc-200 tabular-nums">{favoritesCount}</dd>
               <dt className="text-zinc-500">Manual</dt>

@@ -50,8 +50,23 @@ def stats(db: DB = Depends(get_db)):
                 WHERE pv.video_id = v.video_id AND p.is_music = 1
               ))"""
     ).fetchone()
+    summ = db.music_storage_summary()
     return {
-        "tracks":    db.count_music_videos(),
-        "playlists": len(db.list_music_playlists()),
-        "favorites": fav_row["n"] if fav_row else 0,
+        "tracks":      db.count_music_videos(),
+        "playlists":   len(db.list_music_playlists()),
+        "favorites":   fav_row["n"] if fav_row else 0,
+        "total_bytes": summ["total_bytes"],
+    }
+
+
+@router.get("/storage")
+def music_storage(db: DB = Depends(get_db)):
+    """Music-only storage breakdown for the Storage page: grand total, the
+    per-playlist split, and the heaviest individual clips."""
+    summ = db.music_storage_summary()
+    return {
+        "tracks":      summ["tracks"],
+        "total_bytes": summ["total_bytes"],
+        "playlists":   [dict(r) for r in db.list_music_playlists_with_size()],
+        "largest":     [VideoOut.from_row(r) for r in db.list_largest_music_videos(10)],
     }

@@ -2,8 +2,9 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HardDrive, AlertTriangle, Clock, Trash2, Tv, FileVideo, ShieldCheck, Loader2,
+  Music, ListMusic,
 } from "lucide-react";
-import { storageApi, maintenanceApi, thumbUrl, type ChannelStorage, type Video } from "../lib/api";
+import { storageApi, maintenanceApi, musicApi, thumbUrl, type ChannelStorage, type MusicPlaylistSize, type Video } from "../lib/api";
 import { formatBytes, formatDuration, timeAgo } from "../lib/format";
 import { useState } from "react";
 import { VideoCardMenu } from "../components/VideoCardMenu";
@@ -43,6 +44,10 @@ export function StoragePage() {
 
       {/* Analytics — growth + resolution breakdown */}
       <AnalyticsSection />
+
+      {/* Music — its own storage footprint: total, per-playlist split,
+       *  heaviest clips. Hidden entirely when there's no music yet. */}
+      <MusicStorageSection />
 
       {/* Non-H.264 bulk re-download CTA — only renders when there are
        *  candidates worth surfacing (so the panel disappears once the
@@ -232,6 +237,95 @@ function OldRow({ v }: { v: Video }) {
       </Link>
       <VideoCardMenu video={v} />
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Music storage — total footprint, per-playlist split, heaviest clips. The
+// Music section is otherwise size-blind; this is where "how much disk does my
+// music eat" lives. Hidden when the library has no music.
+
+function MusicStorageSection() {
+  const { data } = useQuery({
+    queryKey: ["music", "storage"],
+    queryFn: musicApi.storage,
+  });
+
+  if (!data || data.tracks === 0) return null;
+
+  const maxPlaylistBytes = Math.max(1, ...data.playlists.map((p) => p.bytes));
+
+  return (
+    <section>
+      <SectionHeader
+        icon={Music}
+        title="Music"
+        hint="Disk used by everything in the Music section — tracks marked as music or living in a music playlist."
+      />
+
+      <div className="rounded-2xl bg-gradient-to-br from-fuchsia-600/15 via-zinc-900 to-zinc-900 p-5 ring-1 ring-fuchsia-500/20">
+        <dl className="grid grid-cols-3 gap-3 sm:gap-5">
+          <Metric label="Music total" value={formatBytes(data.total_bytes)} accent="text-fuchsia-300" />
+          <Metric label="Tracks"      value={data.tracks.toLocaleString()} />
+          <Metric label="Playlists"   value={data.playlists.length.toLocaleString()} />
+        </dl>
+
+        {data.playlists.length > 0 && (
+          <div className="mt-5">
+            <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              <ListMusic className="h-3.5 w-3.5" />
+              By playlist
+            </h3>
+            <div className="space-y-2.5">
+              {data.playlists.map((p) => (
+                <MusicPlaylistRow key={p.id} p={p} maxBytes={maxPlaylistBytes} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {data.largest.length > 0 && (
+        <div className="mt-5">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-100">
+            <FileVideo className="h-4 w-4 text-zinc-500" />
+            Heaviest tracks
+            <span className="text-xs font-normal text-zinc-500">top {data.largest.length} by size</span>
+          </h3>
+          <div className="space-y-2">
+            {data.largest.map((v, i) => <BigVideoRow key={v.id} v={v} rank={i + 1} />)}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MusicPlaylistRow({ p, maxBytes }: { p: MusicPlaylistSize; maxBytes: number }) {
+  const pct = maxBytes > 0 ? Math.min(100, (p.bytes / maxBytes) * 100) : 0;
+  return (
+    <Link
+      to={`/playlist/${p.id}`}
+      className="group flex items-center gap-3 rounded-xl bg-zinc-900/70 px-3 py-2.5 ring-1 ring-zinc-800/70 hover:bg-zinc-800/70"
+    >
+      {p.thumbnail_url ? (
+        <img src={p.thumbnail_url} referrerPolicy="no-referrer" loading="lazy" className="h-9 w-9 flex-shrink-0 rounded-lg object-cover bg-zinc-800" alt="" />
+      ) : (
+        <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-zinc-800">
+          <Music className="h-4 w-4 text-fuchsia-300/70" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-zinc-100">{p.title}</p>
+        <div className="mt-1 h-1 overflow-hidden rounded-full bg-zinc-800">
+          <div className="h-full bg-fuchsia-500" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+      <div className="flex-shrink-0 text-right text-sm tabular-nums">
+        <div className="font-semibold text-zinc-100">{formatBytes(p.bytes)}</div>
+        <div className="text-[11px] text-zinc-500">{p.tracks} {p.tracks === 1 ? "track" : "tracks"}</div>
+      </div>
+    </Link>
   );
 }
 

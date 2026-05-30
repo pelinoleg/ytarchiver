@@ -375,6 +375,22 @@ export interface MusicStats {
   tracks: number;
   playlists: number;
   favorites: number;
+  total_bytes: number;
+}
+
+export interface MusicPlaylistSize {
+  id: number;
+  title: string;
+  thumbnail_url: string | null;
+  tracks: number;
+  bytes: number;
+}
+
+export interface MusicStorage {
+  tracks: number;
+  total_bytes: number;
+  playlists: MusicPlaylistSize[];
+  largest: Video[];
 }
 
 export const musicApi = {
@@ -384,6 +400,7 @@ export const musicApi = {
   trackIds:  () => request<{ video_ids: string[] }>(`/api/music/track-ids`),
   playlists: () => request<Playlist[]>(`/api/music/playlists`),
   stats:     () => request<MusicStats>(`/api/music/stats`),
+  storage:   () => request<MusicStorage>(`/api/music/storage`),
 };
 
 export const settingsApi = {

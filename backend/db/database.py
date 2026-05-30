@@ -1011,6 +1011,43 @@ class DB:
         ).fetchone()
         return dict(row) if row else {"videos": 0, "total_bytes": 0, "avg_bytes": 0, "max_bytes": 0}
 
+    def music_storage_summary(self):
+        """Track count + bytes on disk for everything in the Music section
+        (``done`` with a known file size)."""
+        row = self.conn.execute(
+            f"SELECT COUNT(*) AS tracks, "
+            f"       COALESCE(SUM(v.file_size_bytes), 0) AS total_bytes "
+            f"FROM videos v "
+            f"WHERE v.status = 'done' AND v.file_size_bytes IS NOT NULL AND {IS_MUSIC_SQL}"
+        ).fetchone()
+        return dict(row) if row else {"tracks": 0, "total_bytes": 0}
+
+    def list_largest_music_videos(self, limit: int = 10):
+        """Top music clips by file size — for the Storage page's music section."""
+        return self.conn.execute(
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+            f"FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
+            f"WHERE v.status = 'done' AND v.file_size_bytes IS NOT NULL AND {IS_MUSIC_SQL} "
+            f"ORDER BY v.file_size_bytes DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+
+    def list_music_playlists_with_size(self):
+        """Each music playlist with how many downloaded tracks it holds and the
+        bytes they occupy. Only ``done`` videos with a known size count."""
+        return self.conn.execute(
+            "SELECT p.id, p.title, p.thumbnail_url, "
+            "       COUNT(v.id) AS tracks, "
+            "       COALESCE(SUM(v.file_size_bytes), 0) AS bytes "
+            "FROM playlists p "
+            "JOIN playlist_videos pv ON pv.playlist_id = p.id "
+            "JOIN videos v ON v.video_id = pv.video_id "
+            "  AND v.status = 'done' AND v.file_size_bytes IS NOT NULL "
+            "WHERE p.is_music = 1 "
+            "GROUP BY p.id, p.title, p.thumbnail_url "
+            "ORDER BY bytes DESC",
+        ).fetchall()
+
     def list_continue_watching(self, limit: int = 20):
         """Videos started but not yet finished — between 5% and 95% watched.
         Music tracks are excluded; they live in their own section."""
