@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X, Loader2, Download, ListMusic } from "lucide-react";
 import { videosApi, type Quality } from "../lib/api";
+import { useToast } from "./ToastProvider";
 
 export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [url, setUrl] = useState("");
   const [quality, setQuality] = useState<Quality | "">("");
   const [isMusic, setIsMusic] = useState(false);
@@ -15,8 +17,10 @@ export function ManualDownloadModal({ onClose }: { onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ["videos"] });
       qc.invalidateQueries({ queryKey: ["queue"] });
       qc.invalidateQueries({ queryKey: ["manual"] });
+      toast("Added to the download queue");
       onClose();
     },
+    onError: () => toast("Couldn't add that video", "error"),
   });
 
   return (

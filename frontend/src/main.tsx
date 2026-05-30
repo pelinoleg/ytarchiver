@@ -6,6 +6,7 @@ import App from "./App";
 import { ConfirmProvider } from "./components/ConfirmProvider";
 import { SelectionProvider } from "./components/SelectionProvider";
 import { MiniPlayerProvider } from "./components/MiniPlayerProvider";
+import { ToastProvider } from "./components/ToastProvider";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./index.css";
 import { applyStoredAccent } from "./lib/accents";
@@ -25,13 +26,15 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={qc}>
       <BrowserRouter>
-        <ConfirmProvider>
-          <SelectionProvider>
-            <MiniPlayerProvider>
-              <App />
-            </MiniPlayerProvider>
-          </SelectionProvider>
-        </ConfirmProvider>
+        <ToastProvider>
+          <ConfirmProvider>
+            <SelectionProvider>
+              <MiniPlayerProvider>
+                <App />
+              </MiniPlayerProvider>
+            </SelectionProvider>
+          </ConfirmProvider>
+        </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>,

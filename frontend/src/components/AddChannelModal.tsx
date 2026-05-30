@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X, Loader2 } from "lucide-react";
 import { channelsApi, channelFoldersApi, settingsApi, type DownloadPolicy, type Quality } from "../lib/api";
 import { RetentionPicker } from "./RetentionPicker";
+import { useToast } from "./ToastProvider";
 
 const POLICY_OPTIONS: { value: DownloadPolicy; label: string; short: string; hint: string }[] = [
   { value: "new-only", label: "Only new",      short: "Only new",   hint: "Только видео, опубликованные после подписки" },
@@ -16,6 +17,7 @@ const POLICY_OPTIONS: { value: DownloadPolicy; label: string; short: string; hin
 
 export function AddChannelModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
+  const toast = useToast();
   const [url, setUrl] = useState("");
   const [policy, setPolicy] = useState<DownloadPolicy>("new-only");
   const [latestCount, setLatestCount] = useState(10);
@@ -61,8 +63,10 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["channels"] });
       qc.invalidateQueries({ queryKey: ["videos"] });
+      toast("Channel subscribed");
       onClose();
     },
+    onError: () => toast("Couldn't subscribe to that channel", "error"),
   });
 
   return (

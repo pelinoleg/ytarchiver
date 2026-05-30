@@ -7,6 +7,7 @@ import {
 import { videosApi, type Video } from "../lib/api";
 import { youtubeVideoUrl } from "../lib/format";
 import { useConfirm } from "./ConfirmProvider";
+import { useToast } from "./ToastProvider";
 
 const MENU_W = 200;          // px — matches the inline width below
 const MARGIN  = 8;           // viewport gap so the menu never touches an edge
@@ -22,6 +23,7 @@ const MARGIN  = 8;           // viewport gap so the menu never touches an edge
 export function VideoCardMenu({ video }: { video: Video }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const btnRef  = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -101,7 +103,8 @@ export function VideoCardMenu({ video }: { video: Video }) {
 
   const redownload = useMutation({
     mutationFn: () => videosApi.redownload(video.video_id),
-    onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["queue"] }); },
+    onSuccess: () => { invalidateAll(); qc.invalidateQueries({ queryKey: ["queue"] }); toast("Re-downloading — added to the queue"); },
+    onError: () => toast("Couldn't start re-download", "error"),
   });
 
   const remove = useMutation({
@@ -110,7 +113,9 @@ export function VideoCardMenu({ video }: { video: Video }) {
       invalidateAll();
       qc.invalidateQueries({ queryKey: ["queue"] });
       qc.invalidateQueries({ queryKey: ["history"] });
+      toast("Video deleted");
     },
+    onError: () => toast("Couldn't delete the video", "error"),
   });
 
   function stop(e: React.MouseEvent) {

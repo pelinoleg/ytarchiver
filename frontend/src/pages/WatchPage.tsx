@@ -15,6 +15,7 @@ import {
   setMusicShuffle,
 } from "../lib/queue";
 import { useConfirm } from "../components/ConfirmProvider";
+import { useToast } from "../components/ToastProvider";
 import { VideoPlayer, type PlayerHandle } from "../components/Player/VideoPlayer";
 import { EndScreen } from "../components/Player/EndScreen";
 import { RelatedCard } from "../components/RelatedCard";
@@ -33,6 +34,7 @@ export function WatchPage() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const confirm = useConfirm();
+  const toast = useToast();
   const mini = useMiniPlayer();
   const playerRef = useRef<PlayerHandle>(null);
 
@@ -129,8 +131,10 @@ export function WatchPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["videos"] });
       qc.invalidateQueries({ queryKey: ["history"] });
+      toast("Video deleted");
       nav("/");
     },
+    onError: () => toast("Couldn't delete the video", "error"),
   });
 
   // ⌘/Ctrl + Delete (or Backspace) deletes the currently-open video with no

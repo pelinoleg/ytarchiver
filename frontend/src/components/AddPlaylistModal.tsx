@@ -5,6 +5,7 @@ import { X, Loader2, ListMusic, Link2, Search } from "lucide-react";
 import { playlistsApi, settingsApi, type Quality } from "../lib/api";
 import { RetentionPicker } from "./RetentionPicker";
 import { describeQuality } from "../lib/format";
+import { useToast } from "./ToastProvider";
 
 type Mode = "url" | "search";
 
@@ -13,6 +14,7 @@ export function AddPlaylistModal({
 }: { onClose: () => void; initialMode?: Mode }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const toast = useToast();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [url, setUrl] = useState("");
   const [query, setQuery] = useState("");
@@ -45,9 +47,11 @@ export function AddPlaylistModal({
     onSuccess: (p) => {
       qc.invalidateQueries({ queryKey: ["playlists"] });
       qc.invalidateQueries({ queryKey: ["videos"] });
+      toast("Playlist added");
       onClose();
       navigate(`/playlist/${p.id}`);
     },
+    onError: () => toast("Couldn't add that playlist", "error"),
   });
 
   const canSubmit = mode === "url" ? !!url.trim() : !!query.trim() && count > 0;
