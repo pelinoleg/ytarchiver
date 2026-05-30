@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Clock, Loader2, AlertTriangle, Pin, CheckCircle2 } from "lucide-react";
+import { Clock, Loader2, AlertTriangle, Pin, CheckCircle2, Play } from "lucide-react";
 import { previewUrl, thumbUrl, type Video } from "../lib/api";
 import { formatDuration, formatUploadDate, formatBytes, isRecent } from "../lib/format";
 import { WatchProgress } from "./WatchProgress";
@@ -114,7 +114,7 @@ export function VideoCard({ video }: { video: Video }) {
             alt=""
             referrerPolicy="no-referrer"
             loading="lazy"
-            className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02] ${
+            className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100 ${
               showPreview ? "opacity-0" : "opacity-100"
             }`}
           />
@@ -134,6 +134,17 @@ export function VideoCard({ video }: { video: Video }) {
             preload="none"
             className="absolute inset-0 h-full w-full object-cover"
           />
+        )}
+
+        {/* Hover play affordance — only on ready videos, and not while the
+            inline preview is playing or in select mode. Pure transform+opacity,
+            neutral (red stays reserved); disabled under reduced-motion. */}
+        {video.status === "done" && !inSelectMode && !showPreview && (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition-[background-color,opacity] duration-200 group-hover:bg-black/25 group-hover:opacity-100 motion-reduce:transition-none">
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-black/55 text-white shadow-lg ring-1 ring-white/15 backdrop-blur-sm scale-90 transition-transform duration-200 group-hover:scale-100 motion-reduce:transform-none">
+              <Play className="h-6 w-6 translate-x-px fill-current" />
+            </span>
+          </div>
         )}
 
         <div className="absolute bottom-1 right-1 flex items-center gap-1">
