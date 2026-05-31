@@ -87,13 +87,13 @@ export function EndScreen({
                   cx="50" cy="50" r={RING_R}
                   fill="none"
                   stroke="rgba(255,255,255,0.18)"
-                  strokeWidth="4"
+                  strokeWidth="8"
                 />
                 <circle
                   cx="50" cy="50" r={RING_R}
                   fill="none"
                   stroke="var(--color-accent)"
-                  strokeWidth="4"
+                  strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={RING_C}
                   strokeDashoffset={dashoffset}

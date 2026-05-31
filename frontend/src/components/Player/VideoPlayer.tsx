@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import {
   Play, Pause, Maximize, Minimize,
   PictureInPicture2, Subtitles, ListVideo, RotateCcw, RotateCw,
-  SkipForward, SkipBack, X,
+  SkipForward, SkipBack, X, CircleHelp,
 } from "lucide-react";
 import type { Chapter, SponsorSegment, Video, VideoVariant } from "../../lib/api";
 import { streamUrl, subtitleUrl, thumbUrl, variantsApi } from "../../lib/api";
@@ -1405,6 +1405,11 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
                 <Subtitles className="h-6 w-6" />
               </IconBtn>
             </div>
+          )}
+          {!isTouch && (
+            <IconBtn label="Keyboard shortcuts (?)" active={showHelp} onClick={() => setShowHelp((s) => !s)}>
+              <CircleHelp className="h-6 w-6" />
+            </IconBtn>
           )}
           <IconBtn label="Picture in Picture (I)" onClick={togglePiP}>
             <PictureInPicture2 className="h-6 w-6" />

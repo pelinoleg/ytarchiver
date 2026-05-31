@@ -199,23 +199,44 @@ export function SettingsPage() {
           </Row>
         </Section>
 
-        <Section title="Расписание загрузок" subtitle="Когда и как быстро качать. Окно по локальному времени; старт = конец → качаем всегда.">
+        <Section title="Расписание загрузок" subtitle="Качать только в заданные часы и/или с ограничением скорости. Выключено → качаем всегда без лимита (настройки сохраняются).">
           <Row
-            label="Активные часы"
-            hint="Качать только в этом окне (например 1 → 7 — ночью). Вне окна загрузки ждут. Старт = конец → без ограничения."
+            label="Включить"
+            hint="Главный переключатель окна и лимита ниже."
           >
-            <div className="flex items-center gap-2">
-              <NumberWithUnit value={form.download_window_start} min={0} max={23} onChange={(n) => update("download_window_start", n)} unit="ч" />
-              <span className="text-xs text-zinc-500">→</span>
-              <NumberWithUnit value={form.download_window_end} min={0} max={23} onChange={(n) => update("download_window_end", n)} unit="ч" />
-            </div>
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.download_schedule_enabled}
+                onChange={(e) => update("download_schedule_enabled", e.target.checked)}
+                className="h-4 w-4 accent-accent"
+              />
+              <span className="text-zinc-300">{form.download_schedule_enabled ? "Включено" : "Выключено"}</span>
+            </label>
           </Row>
-          <Row
-            label="Лимит скорости"
-            hint="Потолок скорости загрузки, КБ/с. 0 = без ограничения. Применяется к новым загрузкам."
-          >
-            <NumberWithUnit value={form.download_rate_limit_kbps} min={0} max={100000} step={100} onChange={(n) => update("download_rate_limit_kbps", n)} unit="КБ/с" />
-          </Row>
+          <div className={form.download_schedule_enabled ? "" : "pointer-events-none opacity-40"}>
+            <Row
+              label="Активные часы"
+              hint="Качать только в этом окне (например 1 → 7 — ночью). Вне окна загрузки ждут. Старт = конец → без ограничения по времени."
+            >
+              <div className="flex items-center gap-2">
+                <NumberWithUnit value={form.download_window_start} min={0} max={23} onChange={(n) => update("download_window_start", n)} unit="ч" />
+                <span className="text-xs text-zinc-500">→</span>
+                <NumberWithUnit value={form.download_window_end} min={0} max={23} onChange={(n) => update("download_window_end", n)} unit="ч" />
+              </div>
+            </Row>
+            <Row
+              label="Лимит скорости"
+              hint="Потолок скорости загрузки, МБ/с. 0 = без ограничения. (1 МБ/с ≈ файл 1 МБ за секунду.)"
+            >
+              <NumberWithUnit
+                value={Math.round((form.download_rate_limit_kbps / 1024) * 10) / 10}
+                min={0} max={100} step={0.5}
+                onChange={(n) => update("download_rate_limit_kbps", Math.round(n * 1024))}
+                unit="МБ/с"
+              />
+            </Row>
+          </div>
         </Section>
         </div>
 

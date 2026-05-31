@@ -70,10 +70,17 @@ def is_paused() -> bool:
     return str(raw).strip().lower() in ("1", "true", "yes", "on")
 
 
+def _kv_bool(key: str) -> bool:
+    raw = _kv_get(key)
+    return str(raw).strip().lower() in ("1", "true", "yes", "on") if raw is not None else False
+
+
 def within_download_window() -> bool:
-    """Whether downloads may start right now per the optional active-hours
-    window (local time). start==end → always allowed. start<end → daytime
-    window; start>end → overnight window (e.g. 23→7)."""
+    """Whether downloads may start right now. The master switch gates this; when
+    off, always allowed. Otherwise honor the active-hours window (local time):
+    start==end → always; start<end → daytime; start>end → overnight (23→7)."""
+    if not _kv_bool("download_schedule_enabled"):
+        return True
     from datetime import datetime
     start = _kv_int("download_window_start", 0)
     end = _kv_int("download_window_end", 0)
