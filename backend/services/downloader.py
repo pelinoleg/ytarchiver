@@ -21,12 +21,12 @@ def _rate_limit_bytes() -> Optional[int]:
             rows = {
                 r["key"]: r["value"] for r in conn.execute(
                     "SELECT key, value FROM settings "
-                    "WHERE key IN ('download_schedule_enabled', 'download_rate_limit_kbps')"
+                    "WHERE key IN ('download_rate_limit_enabled', 'download_rate_limit_kbps')"
                 ).fetchall()
             }
         finally:
             conn.close()
-        enabled = str(rows.get("download_schedule_enabled", "")).strip().lower() in ("1", "true", "yes", "on")
+        enabled = str(rows.get("download_rate_limit_enabled", "")).strip().lower() in ("1", "true", "yes", "on")
         if not enabled:
             return None
         kbps = int(rows.get("download_rate_limit_kbps") or 0)

@@ -79,7 +79,7 @@ def within_download_window() -> bool:
     """Whether downloads may start right now. The master switch gates this; when
     off, always allowed. Otherwise honor the active-hours window (local time):
     start==end → always; start<end → daytime; start>end → overnight (23→7)."""
-    if not _kv_bool("download_schedule_enabled"):
+    if not _kv_bool("download_window_enabled"):
         return True
     from datetime import datetime
     start = _kv_int("download_window_start", 0)

@@ -199,25 +199,22 @@ export function SettingsPage() {
           </Row>
         </Section>
 
-        <Section title="Расписание загрузок" subtitle="Качать только в заданные часы и/или с ограничением скорости. Выключено → качаем всегда без лимита (настройки сохраняются).">
-          <Row
-            label="Включить"
-            hint="Главный переключатель окна и лимита ниже."
-          >
+        <Section title="Активные часы загрузок" subtitle="Качать только в заданном окне (по локальному времени). Вне окна загрузки ждут. Включается отдельно.">
+          <Row label="Включить окно">
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="checkbox"
-                checked={form.download_schedule_enabled}
-                onChange={(e) => update("download_schedule_enabled", e.target.checked)}
+                checked={form.download_window_enabled}
+                onChange={(e) => update("download_window_enabled", e.target.checked)}
                 className="h-4 w-4 accent-accent"
               />
-              <span className="text-zinc-300">{form.download_schedule_enabled ? "Включено" : "Выключено"}</span>
+              <span className="text-zinc-300">{form.download_window_enabled ? "Включено" : "Выключено"}</span>
             </label>
           </Row>
-          <div className={form.download_schedule_enabled ? "" : "pointer-events-none opacity-40"}>
+          <div className={form.download_window_enabled ? "" : "pointer-events-none opacity-40"}>
             <Row
-              label="Активные часы"
-              hint="Качать только в этом окне (например 1 → 7 — ночью). Вне окна загрузки ждут. Старт = конец → без ограничения по времени."
+              label="Окно"
+              hint="Например 1 → 7 — качать только ночью. Старт = конец → без ограничения по времени."
             >
               <div className="flex items-center gap-2">
                 <NumberWithUnit value={form.download_window_start} min={0} max={23} onChange={(n) => update("download_window_start", n)} unit="ч" />
@@ -225,9 +222,25 @@ export function SettingsPage() {
                 <NumberWithUnit value={form.download_window_end} min={0} max={23} onChange={(n) => update("download_window_end", n)} unit="ч" />
               </div>
             </Row>
+          </div>
+        </Section>
+
+        <Section title="Лимит скорости" subtitle="Потолок скорости загрузки. Включается отдельно от расписания.">
+          <Row label="Включить лимит">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.download_rate_limit_enabled}
+                onChange={(e) => update("download_rate_limit_enabled", e.target.checked)}
+                className="h-4 w-4 accent-accent"
+              />
+              <span className="text-zinc-300">{form.download_rate_limit_enabled ? "Включено" : "Выключено"}</span>
+            </label>
+          </Row>
+          <div className={form.download_rate_limit_enabled ? "" : "pointer-events-none opacity-40"}>
             <Row
-              label="Лимит скорости"
-              hint="Потолок скорости загрузки, МБ/с. 0 = без ограничения. (1 МБ/с ≈ файл 1 МБ за секунду.)"
+              label="Скорость"
+              hint="МБ/с. 0 = без ограничения. (≈1 МБ/с — файл 1 МБ за секунду.)"
             >
               <NumberWithUnit
                 value={Math.round((form.download_rate_limit_kbps / 1024) * 10) / 10}

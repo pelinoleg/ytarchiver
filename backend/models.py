@@ -137,11 +137,12 @@ class GlobalSettings(BaseModel):
     between_downloads_min_seconds: int = 5
     between_downloads_max_seconds: int = 15
     max_concurrent_downloads: int = 1
-    # Optional download schedule + throttle. Master switch gates BOTH the
-    # active-hours window and the speed cap; the values persist when off.
-    download_schedule_enabled: bool = False
+    # Optional download schedule + throttle — independently toggled. Values
+    # persist when their switch is off.
+    download_window_enabled: bool = False
     download_window_start: int = 0      # local hour 0-23
     download_window_end: int = 0        # local hour 0-23
+    download_rate_limit_enabled: bool = False
     download_rate_limit_kbps: int = 0   # 0 = unlimited
     preview_width: int = 480
     preview_crf: int = 27

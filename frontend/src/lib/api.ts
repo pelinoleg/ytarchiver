@@ -97,9 +97,10 @@ export interface GlobalSettings {
   between_downloads_min_seconds: number;
   between_downloads_max_seconds: number;
   max_concurrent_downloads: number;
-  download_schedule_enabled: boolean;
+  download_window_enabled: boolean;
   download_window_start: number;
   download_window_end: number;
+  download_rate_limit_enabled: boolean;
   download_rate_limit_kbps: number;
   preview_width: number;
   preview_crf: number;
