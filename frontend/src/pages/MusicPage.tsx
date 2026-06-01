@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Music, Play, Shuffle, ListMusic, Search, Inbox, Star,
   Infinity as InfinityIcon, MoreVertical, MinusCircle,
+  Plus, Check, ArrowDownUp, ListPlus, Loader2,
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import {
-  musicApi, playlistsApi, videosApi, thumbUrl, previewUrl,
-  type Playlist, type Video,
+  musicApi, musicCollectionsApi, playlistsApi, videosApi, thumbUrl, previewUrl,
+  type MusicCollection, type Playlist, type Video,
 } from "../lib/api";
 import { formatBytes, formatDuration, formatUploadDate, timeAgo } from "../lib/format";
 import { setMusicQueue, shuffleArray, getMusicShuffle, setMusicShuffle } from "../lib/queue";
@@ -23,15 +24,50 @@ const VIRTUALIZE_THRESHOLD = 200;
 
 const PREVIEW_DELAY_MS = 400;
 
+type SortKey = "recent" | "oldest" | "title" | "duration" | "published";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "recent",    label: "Сначала новые" },
+  { key: "oldest",    label: "Сначала старые" },
+  { key: "published", label: "Дата публикации" },
+  { key: "title",     label: "По названию" },
+  { key: "duration",  label: "По длительности" },
+];
+
+/** Sort a copy of the track list. "time" is the default lens (when the clip
+ *  landed in the library); the rest are secondary. */
+function sortTracks(tracks: Video[], sort: SortKey): Video[] {
+  const out = [...tracks];
+  const added = (v: Video) => v.downloaded_at ?? "";
+  const published = (v: Video) => v.upload_timestamp ?? (v.upload_date ? Number(v.upload_date) : 0);
+  switch (sort) {
+    case "recent":    out.sort((a, b) => added(b).localeCompare(added(a))); break;
+    case "oldest":    out.sort((a, b) => added(a).localeCompare(added(b))); break;
+    case "published": out.sort((a, b) => Number(published(b)) - Number(published(a))); break;
+    case "title":     out.sort((a, b) => a.title.localeCompare(b.title)); break;
+    case "duration":  out.sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0)); break;
+  }
+  return out;
+}
+
 export function MusicPage() {
   const { data: tracks = [], isLoading: tracksLoading } = useQuery({
     queryKey: ["music", "tracks"],
-    queryFn:  () => musicApi.tracks(500),
+    // Pull the whole library (default cap 5000) — virtualization keeps the DOM
+    // flat, and the old hardcoded 500 silently truncated big libraries.
+    queryFn:  () => musicApi.tracks(),
   });
   const { data: playlists = [], isLoading: playlistsLoading } = useQuery({
     queryKey: ["music", "playlists"],
     queryFn:  musicApi.playlists,
   });
+  const { data: collections = [], isLoading: collectionsLoading } = useQuery({
+    queryKey: ["music", "collections"],
+    queryFn:  musicCollectionsApi.list,
+  });
+
+  const [sort, setSort] = useState<SortKey>("recent");
+  const sortedTracks = sortTracks(tracks, sort);
 
   // Favorites — separate from the global Favorites page, which deliberately
   // hides music. Lives in its own section so the user has one obvious target
@@ -39,7 +75,8 @@ export function MusicPage() {
   const favorites = tracks.filter((t) => t.is_favorite);
 
   const nav = useNavigate();
-  const isEmpty = !tracksLoading && !playlistsLoading && tracks.length === 0 && playlists.length === 0;
+  const isEmpty = !tracksLoading && !playlistsLoading && !collectionsLoading
+    && tracks.length === 0 && playlists.length === 0 && collections.length === 0;
 
   // Desktop density slider (shared app-wide). Music cards run a touch denser
   // than video cards, so shave the target width a bit. Columns still reflow
@@ -52,8 +89,9 @@ export function MusicPage() {
   ];
   const trackGridStyle = { "--card-min": `${trackCardMin}px` } as CSSProperties;
 
-  // The "all music" track-id list is what powers Play All / Shuffle All.
-  const allIds = tracks.map((t) => t.video_id);
+  // The "all music" track-id list is what powers Play All / Shuffle All — built
+  // from the *sorted* order so the queue matches what's on screen.
+  const allIds = sortedTracks.map((t) => t.video_id);
 
   function playAll(shuffled: boolean) {
     if (!allIds.length) return;
@@ -82,11 +120,11 @@ export function MusicPage() {
         <EmptyState />
       ) : (
         <div className="space-y-10">
-          {(playlists.length > 0 || favorites.length > 0) && (
+          {(playlists.length > 0 || favorites.length > 0 || collections.length > 0) && (
             <section>
               <SectionHeader
                 icon={ListMusic} title="Playlists"
-                count={playlists.length + (favorites.length > 0 ? 1 : 0)}
+                count={playlists.length + collections.length + (favorites.length > 0 ? 1 : 0)}
               />
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
                 {/* Favorites — rendered first, styled like the other playlist
@@ -95,17 +133,25 @@ export function MusicPage() {
                 {favorites.length > 0 && (
                   <FavoritesPlaylistCard tracks={favorites} />
                 )}
+                {/* User-curated local playlists. */}
+                {collections.map((c) => <CollectionCard key={`c-${c.id}`} collection={c} />)}
                 {playlists.map((p) => <MusicPlaylistCard key={p.id} playlist={p} />)}
+                <NewCollectionCard />
               </div>
             </section>
           )}
 
           {tracks.length > 0 && (
             <section>
-              <SectionHeader icon={Music} title="Tracks" count={tracks.length} />
-              {tracks.length > VIRTUALIZE_THRESHOLD ? (
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <SectionHeader icon={Music} title="Tracks" count={tracks.length} noMargin />
+                <SortMenu value={sort} onChange={setSort} />
+              </div>
+              {sortedTracks.length > VIRTUALIZE_THRESHOLD ? (
                 <VirtualVideoGrid
-                  items={tracks}
+                  // Key on the sort so the virtualizer rebuilds rows on re-sort.
+                  key={sort}
+                  items={sortedTracks}
                   breakpoints={trackBreakpoints}
                   minCardWidth={trackCardMin}
                   textBelow={78}
@@ -113,6 +159,7 @@ export function MusicPage() {
                   renderItem={(t, idx) => (
                     <MusicTrackCard
                       track={t}
+                      collections={collections}
                       onPlay={() => {
                         const ordered = [...allIds.slice(idx), ...allIds.slice(0, idx)];
                         setMusicQueue(ordered, false);
@@ -126,10 +173,11 @@ export function MusicPage() {
                   style={trackGridStyle}
                   className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]"
                 >
-                  {tracks.map((t, idx) => (
+                  {sortedTracks.map((t, idx) => (
                     <MusicTrackCard
                       key={t.id}
                       track={t}
+                      collections={collections}
                       onPlay={() => {
                         const ordered = [...allIds.slice(idx), ...allIds.slice(0, idx)];
                         setMusicQueue(ordered, false);
@@ -150,10 +198,11 @@ export function MusicPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SectionHeader({
-  icon: Icon, title, count, tone = "fuchsia",
+  icon: Icon, title, count, tone = "fuchsia", noMargin = false,
 }: {
   icon: typeof Music; title: string; count: number;
   tone?: "fuchsia" | "amber";
+  noMargin?: boolean;
 }) {
   const chip = tone === "amber"
     ? "bg-yellow-400/15 text-yellow-300"
@@ -162,12 +211,187 @@ function SectionHeader({
     ? "bg-yellow-400/12 text-yellow-300"
     : "bg-fuchsia-500/12 text-fuchsia-300";
   return (
-    <div className="mb-4 flex items-center gap-2.5">
+    <div className={`flex items-center gap-2.5 ${noMargin ? "" : "mb-4"}`}>
       <span className={`grid h-7 w-7 flex-shrink-0 place-items-center rounded-lg ${chip}`}>
         <Icon className="h-4 w-4" />
       </span>
       <h2 className="text-lg font-semibold tracking-tight text-zinc-100">{title}</h2>
       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${countChip}`}>{count}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sort menu — native select keeps it accessible and avoids extra popover
+// plumbing. Sorting is client-side over the already-fetched track list.
+
+function SortMenu({ value, onChange }: { value: SortKey; onChange: (k: SortKey) => void }) {
+  return (
+    <label className="flex items-center gap-2 text-sm">
+      <ArrowDownUp className="h-4 w-4 text-zinc-500" />
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as SortKey)}
+        className="rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-200 outline-none focus:border-zinc-600"
+        aria-label="Сортировка"
+      >
+        {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Local playlist (collection) card — user-curated, lives next to the YouTube
+// music playlists but tagged LOCAL and links to its own detail page.
+
+function CollectionCard({ collection: c }: { collection: MusicCollection }) {
+  const nav = useNavigate();
+  const { refetch } = useQuery({
+    queryKey: ["music", "collection", c.id],
+    queryFn: () => musicCollectionsApi.get(c.id),
+    enabled: false,
+  });
+
+  async function play(shuffled: boolean) {
+    const res = await refetch();
+    const ids = (res.data?.videos ?? [])
+      .filter((v) => v.status === "done")
+      .map((v) => v.video_id);
+    if (!ids.length) return;
+    const ordered = shuffled ? shuffleArray(ids) : ids;
+    setMusicQueue(ordered, shuffled);
+    const params = new URLSearchParams({ source: "music" });
+    if (shuffled) params.set("shuffle", "1");
+    nav(`/watch/${ordered[0]}?${params.toString()}`);
+  }
+
+  return (
+    <div className="group block min-w-0">
+      <PlaylistStack accent="bg-fuchsia-500/35" accentSoft="bg-fuchsia-500/15">
+        <Link
+          to={`/music/collection/${c.id}`}
+          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:ring-1 group-hover:ring-fuchsia-500/40 group-hover:shadow-lg group-hover:shadow-fuchsia-900/30"
+        >
+          {c.covers.length > 0 ? (
+            <div className="grid h-full w-full grid-cols-2 grid-rows-2">
+              {c.covers.map((cov) => (
+                <img
+                  key={cov.video_id}
+                  src={cov.thumbnail_path ? thumbUrl(cov.video_id) : cov.thumbnail_url!}
+                  referrerPolicy="no-referrer"
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                />
+              ))}
+              {c.covers.length < 4 && Array.from({ length: 4 - c.covers.length }).map((_, i) => (
+                <div key={i} className="bg-gradient-to-br from-fuchsia-700/30 via-purple-900/25 to-zinc-900" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid h-full w-full place-items-center bg-gradient-to-br from-fuchsia-700/30 via-purple-900/25 to-zinc-900">
+              <ListMusic className="h-10 w-10 text-fuchsia-300/70" />
+            </div>
+          )}
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/65 to-transparent" />
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-fuchsia-500/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fuchsia-950 shadow">
+            <ListMusic className="h-3 w-3" />
+            Local
+          </span>
+          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+            {c.done_count}
+          </span>
+        </Link>
+
+        {c.done_count > 0 && (
+          <div className="pointer-events-none absolute right-2 bottom-7 flex items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+            <button
+              onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
+              aria-label="Shuffle"
+              title="Shuffle"
+              className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-zinc-900/90 text-fuchsia-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
+              aria-label="Play"
+              title="Play"
+              className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-fuchsia-500 text-white shadow-xl shadow-fuchsia-900/50 hover:bg-fuchsia-400 active:scale-95 transition-transform"
+            >
+              <Play className="h-5 w-5 fill-current translate-x-0.5" />
+            </button>
+          </div>
+        )}
+      </PlaylistStack>
+
+      <Link to={`/music/collection/${c.id}`} className="block mt-2.5">
+        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-zinc-100 group-hover:text-white transition-colors break-words" title={c.name}>
+          {c.name}
+        </h3>
+        <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+          {c.done_count} {c.done_count === 1 ? "track" : "tracks"}
+        </p>
+      </Link>
+    </div>
+  );
+}
+
+// "＋ New playlist" tile — idle dashed card that flips into an inline name
+// input. Creating navigates straight to the fresh playlist.
+
+function NewCollectionCard() {
+  const qc = useQueryClient();
+  const nav = useNavigate();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState("");
+
+  const create = useMutation({
+    mutationFn: () => musicCollectionsApi.create(name.trim()),
+    onSuccess: (col) => {
+      qc.invalidateQueries({ queryKey: ["music", "collections"] });
+      setName(""); setEditing(false);
+      nav(`/music/collection/${col.id}`);
+    },
+  });
+
+  return (
+    <div className="min-w-0">
+      <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40">
+        {editing ? (
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate(); }}
+            className="flex w-full items-center gap-1.5 px-2"
+          >
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={() => { if (!name.trim()) setEditing(false); }}
+              placeholder="Название…"
+              className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm outline-none focus:border-fuchsia-500"
+            />
+            <button
+              type="submit"
+              disabled={create.isPending || !name.trim()}
+              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg bg-fuchsia-500 text-white hover:bg-fuchsia-400 disabled:opacity-50"
+            >
+              {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-zinc-500 transition-colors hover:text-fuchsia-300"
+          >
+            <Plus className="h-7 w-7" />
+            <span className="text-xs font-medium">Новый плейлист</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -529,7 +753,9 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
 // Track card — purpose-built music tile with hover-preview + a quick action
 // menu to unmark the track (returns it to its normal home).
 
-function MusicTrackCard({ track: t, onPlay }: { track: Video; onPlay: () => void }) {
+function MusicTrackCard({
+  track: t, onPlay, collections,
+}: { track: Video; onPlay: () => void; collections: MusicCollection[] }) {
   const qc = useQueryClient();
   const thumb = t.thumbnail_path ? thumbUrl(t.video_id) : t.thumbnail_url;
   const [previewing, setPreviewing] = useState(false);
@@ -637,20 +863,21 @@ function MusicTrackCard({ track: t, onPlay }: { track: Video; onPlay: () => void
         </p>
       </button>
 
-      <TrackMenu video={t} />
+      <TrackMenu video={t} collections={collections} />
     </div>
   );
 }
 
-function TrackMenu({ video }: { video: Video }) {
+function TrackMenu({ video, collections }: { video: Video; collections: MusicCollection[] }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [subOpen, setSubOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSubOpen(false); }
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -672,6 +899,27 @@ function TrackMenu({ video }: { video: Video }) {
     },
   });
 
+  const addToCollection = useMutation({
+    mutationFn: (collectionId: number) => musicCollectionsApi.addVideo(collectionId, video.video_id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["music", "collections"] });
+      setOpen(false); setSubOpen(false);
+    },
+  });
+
+  const createAndAdd = useMutation({
+    mutationFn: async () => {
+      const name = window.prompt("Название нового плейлиста");
+      if (!name || !name.trim()) return;
+      const col = await musicCollectionsApi.create(name.trim());
+      await musicCollectionsApi.addVideo(col.id, video.video_id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["music", "collections"] });
+      setOpen(false); setSubOpen(false);
+    },
+  });
+
   return (
     <div ref={ref} className="absolute right-2 top-2">
       <button
@@ -690,6 +938,39 @@ function TrackMenu({ video }: { video: Video }) {
             <Star className={`h-4 w-4 ${video.is_favorite ? "fill-current text-yellow-300" : ""}`} />
             {video.is_favorite ? "Remove from favorites" : "Add to favorites"}
           </button>
+
+          {/* Add to a local playlist — expands an inline list of collections. */}
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubOpen((s) => !s); }}
+            className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-zinc-100 hover:bg-zinc-800"
+          >
+            <ListPlus className="h-4 w-4" />
+            В плейлист
+          </button>
+          {subOpen && (
+            <div className="max-h-48 overflow-y-auto border-y border-white/5 bg-zinc-950/60">
+              {collections.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCollection.mutate(c.id); }}
+                  disabled={addToCollection.isPending}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 pl-9 text-left text-[13px] text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
+                >
+                  <span className="truncate">{c.name}</span>
+                  <span className="ml-auto text-[10px] tabular-nums text-zinc-500">{c.done_count}</span>
+                </button>
+              ))}
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); createAndAdd.mutate(); }}
+                disabled={createAndAdd.isPending}
+                className="flex w-full items-center gap-2 px-3 py-1.5 pl-9 text-left text-[13px] font-medium text-fuchsia-300 hover:bg-zinc-800 disabled:opacity-50"
+              >
+                {createAndAdd.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                Создать плейлист…
+              </button>
+            </div>
+          )}
+
           {video.is_music_via_playlist && !video.is_music ? (
             <div className="flex items-start gap-2 px-3 py-2 text-sm text-zinc-500">
               <Music className="h-4 w-4 text-fuchsia-400 mt-0.5 flex-shrink-0" />

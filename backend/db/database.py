@@ -188,6 +188,35 @@ _MIGRATIONS: list[tuple[str, list[str]]] = [
         # added_at (which the UI shows as "added X ago").
         "ALTER TABLE videos ADD COLUMN priority INTEGER NOT NULL DEFAULT 0",
     ]),
+    ("0021_preview_error", [
+        # Track why a hover-preview failed to build + how many times we tried,
+        # so the Previews page can show errors and the backfill loop can stop
+        # hammering a permanently-broken file. preview_path stays the success
+        # signal; these two only describe the not-yet-built path.
+        "ALTER TABLE videos ADD COLUMN preview_error TEXT",
+        "ALTER TABLE videos ADD COLUMN preview_attempts INTEGER NOT NULL DEFAULT 0",
+    ]),
+    ("0022_music_collections", [
+        # User-curated local playlists, scoped to the Music section. Distinct
+        # from the ``playlists`` table (which mirrors YouTube playlists and is
+        # driven by sync) — these are hand-built and never synced. A video can
+        # sit in any number of collections via the join table.
+        "CREATE TABLE IF NOT EXISTS music_collections ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  name TEXT NOT NULL,"
+        "  created_at TEXT NOT NULL DEFAULT (datetime('now'))"
+        ")",
+        "CREATE TABLE IF NOT EXISTS music_collection_videos ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  collection_id INTEGER NOT NULL REFERENCES music_collections(id) ON DELETE CASCADE,"
+        "  video_id TEXT NOT NULL,"
+        "  position INTEGER NOT NULL,"
+        "  added_at TEXT NOT NULL DEFAULT (datetime('now')),"
+        "  UNIQUE (collection_id, video_id)"
+        ")",
+        "CREATE INDEX IF NOT EXISTS idx_music_collection_videos_pos "
+        "  ON music_collection_videos(collection_id, position)",
+    ]),
 ]
 
 
@@ -403,6 +432,99 @@ class DB:
             "FROM playlists p "
             "WHERE p.is_music = 1 "
             "ORDER BY p.title COLLATE NOCASE ASC"
+        ).fetchall()
+
+    # ── Music collections (user-curated local playlists) ─────────────────────────
+
+    _COLLECTION_COUNTS = (
+        "(SELECT COUNT(*) FROM music_collection_videos cv "
+        " WHERE cv.collection_id = mc.id) AS item_count, "
+        "(SELECT COUNT(*) FROM music_collection_videos cv "
+        " JOIN videos v ON v.video_id = cv.video_id "
+        " WHERE cv.collection_id = mc.id AND v.status = 'done') AS done_count"
+    )
+
+    def list_music_collections(self):
+        return self.conn.execute(
+            f"SELECT mc.*, {self._COLLECTION_COUNTS} "
+            f"FROM music_collections mc "
+            f"ORDER BY mc.name COLLATE NOCASE ASC"
+        ).fetchall()
+
+    def get_music_collection(self, collection_id: int):
+        return self.conn.execute(
+            f"SELECT mc.*, {self._COLLECTION_COUNTS} "
+            f"FROM music_collections mc WHERE mc.id = ?",
+            (collection_id,),
+        ).fetchone()
+
+    def collection_cover_videos(self, collection_id: int, limit: int = 4):
+        """Up to N member thumbnails for the card mosaic, in playlist order."""
+        return self.conn.execute(
+            "SELECT v.video_id, v.thumbnail_path, v.thumbnail_url "
+            "FROM music_collection_videos cv "
+            "JOIN videos v ON v.video_id = cv.video_id "
+            "WHERE cv.collection_id = ? AND v.status = 'done' "
+            "  AND (v.thumbnail_path IS NOT NULL OR v.thumbnail_url IS NOT NULL) "
+            "ORDER BY cv.position LIMIT ?",
+            (collection_id, limit),
+        ).fetchall()
+
+    def create_music_collection(self, name: str) -> int:
+        cur = self.conn.execute(
+            "INSERT INTO music_collections (name) VALUES (?)", (name,),
+        )
+        self.conn.commit()
+        return cur.lastrowid
+
+    def rename_music_collection(self, collection_id: int, name: str) -> None:
+        self.conn.execute(
+            "UPDATE music_collections SET name = ? WHERE id = ?", (name, collection_id),
+        )
+        self.conn.commit()
+
+    def delete_music_collection(self, collection_id: int) -> None:
+        # Join rows go with it via ON DELETE CASCADE.
+        self.conn.execute("DELETE FROM music_collections WHERE id = ?", (collection_id,))
+        self.conn.commit()
+
+    def add_to_music_collection(self, collection_id: int, video_id: str) -> None:
+        row = self.conn.execute(
+            "SELECT COALESCE(MAX(position), -1) + 1 AS next "
+            "FROM music_collection_videos WHERE collection_id = ?",
+            (collection_id,),
+        ).fetchone()
+        self.conn.execute(
+            "INSERT OR IGNORE INTO music_collection_videos "
+            "(collection_id, video_id, position) VALUES (?, ?, ?)",
+            (collection_id, video_id, row["next"]),
+        )
+        self.conn.commit()
+
+    def remove_from_music_collection(self, collection_id: int, video_id: str) -> None:
+        self.conn.execute(
+            "DELETE FROM music_collection_videos "
+            "WHERE collection_id = ? AND video_id = ?",
+            (collection_id, video_id),
+        )
+        self.conn.commit()
+
+    def list_collection_videos(self, collection_id: int):
+        """Full video rows for a collection, in playlist order. Shape matches
+        ``list_music_videos`` so VideoOut.from_row + the music UI just work."""
+        return self.conn.execute(
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+            f"       EXISTS ("
+            f"         SELECT 1 FROM playlist_videos pv "
+            f"         JOIN playlists p ON p.id = pv.playlist_id "
+            f"         WHERE pv.video_id = v.video_id AND p.is_music = 1"
+            f"       ) AS is_music_via_playlist "
+            f"FROM music_collection_videos cv "
+            f"JOIN videos v ON v.video_id = cv.video_id "
+            f"LEFT JOIN channels c ON c.id = v.channel_id "
+            f"WHERE cv.collection_id = ? AND v.status = 'done' "
+            f"ORDER BY cv.position",
+            (collection_id,),
         ).fetchall()
 
     # ── Playlists ────────────────────────────────────────────────────────────────
@@ -762,6 +884,53 @@ class DB:
         self.conn.execute(
             f"UPDATE videos SET {cols} WHERE video_id = ?",
             [*clean.values(), video_id],
+        )
+        self.conn.commit()
+
+    # ── Preview status ───────────────────────────────────────────────────────
+
+    def preview_status_counts(self, min_duration: int, max_attempts: int) -> dict:
+        """Bucket every downloaded video by hover-preview state for the
+        Previews dashboard."""
+        row = self.conn.execute(
+            "SELECT "
+            "  COUNT(*) AS total, "
+            "  SUM(CASE WHEN preview_path IS NOT NULL THEN 1 ELSE 0 END) AS done, "
+            "  SUM(CASE WHEN preview_path IS NULL AND duration >= ? "
+            "           AND COALESCE(preview_attempts,0) < ? THEN 1 ELSE 0 END) AS pending, "
+            "  SUM(CASE WHEN preview_path IS NULL AND duration >= ? "
+            "           AND COALESCE(preview_attempts,0) >= ? THEN 1 ELSE 0 END) AS failed, "
+            "  SUM(CASE WHEN preview_path IS NULL AND (duration IS NULL OR duration < ?) "
+            "           THEN 1 ELSE 0 END) AS ineligible "
+            "FROM videos WHERE status = 'done' AND file_path IS NOT NULL",
+            (min_duration, max_attempts, min_duration, max_attempts, min_duration),
+        ).fetchone()
+        return {
+            "total":      row["total"] or 0,
+            "done":       row["done"] or 0,
+            "pending":    row["pending"] or 0,
+            "failed":     row["failed"] or 0,
+            "ineligible": row["ineligible"] or 0,
+        }
+
+    def list_preview_failures(self, max_attempts: int, limit: int = 200):
+        """Videos that gave up after ``max_attempts`` — with the recorded error."""
+        return self.conn.execute(
+            "SELECT v.video_id, v.title, v.duration, v.downloaded_at, "
+            "       v.preview_error, v.preview_attempts, "
+            "       c.name AS channel_name "
+            "FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
+            "WHERE v.status = 'done' AND v.preview_path IS NULL "
+            "  AND COALESCE(v.preview_attempts,0) >= ? "
+            "ORDER BY v.downloaded_at DESC LIMIT ?",
+            (max_attempts, limit),
+        ).fetchall()
+
+    def reset_preview_attempts(self, video_id: str) -> None:
+        self.conn.execute(
+            "UPDATE videos SET preview_attempts = 0, preview_error = NULL "
+            "WHERE video_id = ?",
+            (video_id,),
         )
         self.conn.commit()
 

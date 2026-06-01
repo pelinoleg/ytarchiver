@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     preview_width: int = 480
     preview_crf: int = 27
     preview_segments: int = 12
+    # Hard wall-clock cap for a single ffmpeg preview run. Big/long source
+    # files on a slow NAS CPU can take a while; bump this if previews time out.
+    preview_timeout: int = 900
 
     # Music queue side-panel cap on the watch page.
     music_queue_panel_size: int = 100

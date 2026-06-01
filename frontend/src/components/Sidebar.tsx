@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Library, Download, History, Tv, FolderDown, Star, Activity,
   Loader2, Database, ListMusic, Music, HardDrive, ChevronDown, ChevronUp,
-  Home, Pause, Play, ChevronsDownUp, ChevronsUpDown,
+  Home, Pause, Play, ChevronsDownUp, ChevronsUpDown, Film,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 import {
@@ -240,6 +240,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
           </div>
           <CompactLink icon={History}   label="History"  to="/history" />
           <CompactLink icon={HardDrive} label="Storage"  to="/storage"  />
+          <CompactLink icon={Film}      label="Previews" to="/previews" />
           <CompactLink icon={Activity}  label="Activity" to="/events" />
         </div>
 

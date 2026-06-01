@@ -105,6 +105,7 @@ export interface GlobalSettings {
   preview_width: number;
   preview_crf: number;
   preview_segments: number;
+  preview_timeout: number;
   music_queue_panel_size: number;
   mini_player_enabled: boolean;
   sponsorblock_refresh_days: number;
@@ -410,6 +411,63 @@ export const musicApi = {
   playlists: () => request<Playlist[]>(`/api/music/playlists`),
   stats:     () => request<MusicStats>(`/api/music/stats`),
   storage:   () => request<MusicStorage>(`/api/music/storage`),
+};
+
+// ── User-curated local music playlists (collections) ────────────────────────
+export interface CollectionCover {
+  video_id: string;
+  thumbnail_path: string | null;
+  thumbnail_url: string | null;
+}
+export interface MusicCollection {
+  id: number;
+  name: string;
+  item_count: number;
+  done_count: number;
+  created_at: string | null;
+  covers: CollectionCover[];
+}
+
+export const musicCollectionsApi = {
+  list:   () => request<MusicCollection[]>(`/api/music/collections`),
+  get:    (id: number) => request<{ collection: MusicCollection; videos: Video[] }>(`/api/music/collections/${id}`),
+  create: (name: string) =>
+    request<MusicCollection>(`/api/music/collections`, { method: "POST", body: JSON.stringify({ name }) }),
+  rename: (id: number, name: string) =>
+    request<MusicCollection>(`/api/music/collections/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  remove: (id: number) =>
+    request<void>(`/api/music/collections/${id}`, { method: "DELETE" }),
+  addVideo: (id: number, video_id: string) =>
+    request<MusicCollection>(`/api/music/collections/${id}/videos`, { method: "POST", body: JSON.stringify({ video_id }) }),
+  removeVideo: (id: number, video_id: string) =>
+    request<void>(`/api/music/collections/${id}/videos/${video_id}`, { method: "DELETE" }),
+};
+
+// ── Hover-preview generation status ─────────────────────────────────────────
+export interface PreviewStatus {
+  total: number;
+  done: number;
+  pending: number;
+  failed: number;
+  ineligible: number;
+  min_duration: number;
+  max_attempts: number;
+}
+export interface PreviewFailure {
+  video_id: string;
+  title: string;
+  duration: number | null;
+  downloaded_at: string | null;
+  preview_error: string | null;
+  preview_attempts: number;
+  channel_name: string | null;
+}
+
+export const previewsApi = {
+  status: () => request<PreviewStatus>(`/api/previews/status`),
+  failed: (limit = 200) => request<PreviewFailure[]>(`/api/previews/failed?limit=${limit}`),
+  retry:  (videoId: string) => request<{ status: string }>(`/api/previews/${videoId}/retry`, { method: "POST" }),
+  runNow: (batch = 20) => request<{ status: string; batch: number }>(`/api/previews/run?batch=${batch}`, { method: "POST" }),
 };
 
 export const settingsApi = {

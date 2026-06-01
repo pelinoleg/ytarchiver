@@ -13,6 +13,8 @@ import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { PlaylistPage } from "./pages/PlaylistPage";
 import { MusicPage } from "./pages/MusicPage";
 import { MusicFavoritesPage } from "./pages/MusicFavoritesPage";
+import { MusicCollectionPage } from "./pages/MusicCollectionPage";
+import { PreviewsPage } from "./pages/PreviewsPage";
 import { FolderPage } from "./pages/FolderPage";
 import { StoragePage } from "./pages/StoragePage";
 import { SharePage } from "./pages/SharePage";
@@ -30,6 +32,8 @@ export default function App() {
         <Route path="/playlist/:playlistId" element={<PlaylistPage />} />
         <Route path="/music"             element={<MusicPage />} />
         <Route path="/music/favorites"   element={<MusicFavoritesPage />} />
+        <Route path="/music/collection/:id" element={<MusicCollectionPage />} />
+        <Route path="/previews"          element={<PreviewsPage />} />
         <Route path="/storage"           element={<StoragePage />} />
         <Route path="/share"             element={<SharePage />} />
         <Route path="/manual"            element={<ManualPage />} />

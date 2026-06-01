@@ -36,15 +36,26 @@ PREVIEW_SEG_LEN   = 1.0    # seconds per clip
 PREVIEW_WIDTH     = 480    # cards are ~320-360px wide, 480 looks crisp on retina
 PREVIEW_CRF       = 27     # 23 = visually lossless, 28 = small. 27 = balance
 PREVIEW_FPS       = 18
-PREVIEW_TIMEOUT   = 900    # seconds; long videos on CPU-capped Pi need >180
+PREVIEW_TIMEOUT   = 900    # seconds; long videos on CPU-capped Pi need >180. Overridable via the preview_timeout setting.
 PREVIEW_FILENAME  = "preview.mp4"
 MIN_DURATION      = 30     # don't bother for very short videos
+# Give up auto-retrying after this many failed attempts so the backfill loop
+# stops hammering a permanently-broken file. The Previews page can still force
+# a manual retry, which resets the counter.
+MAX_PREVIEW_ATTEMPTS = 3
 
 
-def make_preview(video_path: str, output_path: str, duration_seconds: Optional[float]) -> bool:
-    """Run ffmpeg to build a hover-preview clip. Returns True on success."""
+def make_preview(
+    video_path: str, output_path: str, duration_seconds: Optional[float],
+) -> tuple[bool, Optional[str]]:
+    """Run ffmpeg to build a hover-preview clip.
+
+    Returns ``(True, None)`` on success or ``(False, reason)`` on failure, where
+    ``reason`` is a short human-readable string recorded against the video so the
+    Previews page can show *why* it failed.
+    """
     if not duration_seconds or duration_seconds < MIN_DURATION:
-        return False
+        return False, f"too short (<{MIN_DURATION}s)"
 
     # Knobs are overridable from the Settings KV (Advanced section).
     width    = _kv_int("preview_width",    PREVIEW_WIDTH)
@@ -57,7 +68,7 @@ def make_preview(video_path: str, output_path: str, duration_seconds: Optional[f
     margin = duration_seconds * 0.05
     usable = duration_seconds - 2 * margin
     if usable <= 0:
-        return False
+        return False, "unusable duration"
 
     spacing = usable / segments
     offsets = [margin + i * spacing for i in range(segments)]
@@ -81,24 +92,38 @@ def make_preview(video_path: str, output_path: str, duration_seconds: Optional[f
         result = subprocess.run(cmd, capture_output=True, timeout=timeout, text=True)
     except subprocess.TimeoutExpired:
         log.warning("preview: timed out for %s", video_path)
-        return False
-    except Exception:
+        return False, f"ffmpeg timed out after {timeout}s"
+    except Exception as e:
         log.exception("preview: failed to spawn ffmpeg for %s", video_path)
-        return False
+        return False, f"ffmpeg spawn failed: {str(e)[:120]}"
 
     if result.returncode != 0:
-        log.warning("preview: ffmpeg rc=%d stderr=%s", result.returncode, result.stderr[-300:])
-        return False
+        tail = (result.stderr or "").strip()[-200:]
+        log.warning("preview: ffmpeg rc=%d stderr=%s", result.returncode, tail)
+        return False, f"ffmpeg rc={result.returncode}: {tail}" if tail else f"ffmpeg rc={result.returncode}"
     out = Path(output_path)
     if not out.exists() or out.stat().st_size < 1024:
         log.warning("preview: output missing or tiny for %s", video_path)
-        return False
-    return True
+        return False, "output missing or too small"
+    return True, None
+
+
+def _record_preview_failure(video_id: str, reason: Optional[str]) -> None:
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE videos SET preview_attempts = COALESCE(preview_attempts, 0) + 1, "
+            "preview_error = ? WHERE video_id = ?",
+            (reason, video_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def build_preview_for_video(video_id: str) -> bool:
-    """Locate the video by id, build a preview, record the path. One-shot helper
-    safe to call from worker, scheduler, or HTTP."""
+    """Locate the video by id, build a preview, record the path (or the failure
+    reason). One-shot helper safe to call from worker, scheduler, or HTTP."""
     conn = get_connection()
     try:
         row = conn.execute(
@@ -108,16 +133,21 @@ def build_preview_for_video(video_id: str) -> bool:
     finally:
         conn.close()
     if not row or not row["file_path"]:
+        _record_preview_failure(video_id, "source file path missing")
         return False
     src = Path(row["file_path"])
     if not src.exists():
+        _record_preview_failure(video_id, "source file not found on disk")
         return False
     out = src.parent / PREVIEW_FILENAME
-    if not make_preview(str(src), str(out), row["duration"]):
+    ok, reason = make_preview(str(src), str(out), row["duration"])
+    if not ok:
+        _record_preview_failure(video_id, reason)
         return False
     conn = get_connection()
     try:
-        DB(conn).update_video_fields(video_id, {"preview_path": str(out)})
+        # Success — record the path and clear any prior error.
+        DB(conn).update_video_fields(video_id, {"preview_path": str(out), "preview_error": None})
     finally:
         conn.close()
     log.info("preview: built %s (%d KB)", out, out.stat().st_size // 1024)
@@ -126,16 +156,18 @@ def build_preview_for_video(video_id: str) -> bool:
 
 def backfill_missing_previews(batch: int = 5) -> int:
     """Periodic job — pick a few videos that still need previews and build them.
-    Throttled so we don't hog the CPU."""
+    Skips videos that already failed ``MAX_PREVIEW_ATTEMPTS`` times so a broken
+    file doesn't starve the queue. Throttled so we don't hog the CPU."""
     conn = get_connection()
     try:
         rows = conn.execute(
             "SELECT video_id FROM videos "
             "WHERE status = 'done' AND file_path IS NOT NULL "
             "  AND preview_path IS NULL AND duration >= ? "
+            "  AND COALESCE(preview_attempts, 0) < ? "
             "ORDER BY downloaded_at DESC "
             "LIMIT ?",
-            (MIN_DURATION, batch),
+            (MIN_DURATION, MAX_PREVIEW_ATTEMPTS, batch),
         ).fetchall()
     finally:
         conn.close()

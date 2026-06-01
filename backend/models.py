@@ -147,6 +147,7 @@ class GlobalSettings(BaseModel):
     preview_width: int = 480
     preview_crf: int = 27
     preview_segments: int = 12
+    preview_timeout: int = 900
     music_queue_panel_size: int = 100
     mini_player_enabled: bool = True
     sponsorblock_refresh_days: int = 7

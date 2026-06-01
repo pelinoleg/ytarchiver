@@ -547,6 +547,18 @@ function AdvancedSection({
           </Row>
 
           <Row
+            label="Preview: таймаут"
+            hint="Жёсткий лимит времени на одну генерацию ffmpeg. Длинные/тяжёлые файлы на медленном CPU NAS могут не успевать — увеличь, если в разделе «Превью» видишь ошибки «ffmpeg timed out». Статус генерации и ошибки — на странице Previews."
+          >
+            <NumberWithUnit
+              value={form.preview_timeout}
+              min={30} max={1800} step={30}
+              onChange={(n) => update("preview_timeout", n)}
+              unit="сек"
+            />
+          </Row>
+
+          <Row
             label="Music queue: размер панели"
             hint="Сколько ближайших треков показывать в правой колонке на странице просмотра при play-all / shuffle. Сама очередь может быть длиннее — это только то, что рендерится в UI."
           >

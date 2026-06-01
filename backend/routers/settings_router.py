@@ -32,6 +32,7 @@ class SettingsUpdate(BaseModel):
     preview_width: Optional[int] = None
     preview_crf: Optional[int] = None
     preview_segments: Optional[int] = None
+    preview_timeout: Optional[int] = None
     music_queue_panel_size: Optional[int] = None
     mini_player_enabled: Optional[bool] = None
     sponsorblock_refresh_days: Optional[int] = None
@@ -56,6 +57,7 @@ def _load_settings(db: DB) -> GlobalSettings:
         preview_width=env_settings.preview_width,
         preview_crf=env_settings.preview_crf,
         preview_segments=env_settings.preview_segments,
+        preview_timeout=env_settings.preview_timeout,
         music_queue_panel_size=env_settings.music_queue_panel_size,
         mini_player_enabled=env_settings.mini_player_enabled,
         sponsorblock_refresh_days=env_settings.sponsorblock_refresh_days,
