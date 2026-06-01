@@ -10,7 +10,7 @@ from routers import channels, videos, settings_router, stream, ws, queue, histor
 from services.scheduler import scheduler, configure_jobs
 from services.worker import worker
 from services.db_heal import ensure_healthy_db
-from services.backup_job import backup_database
+from services.backup_job import backup_database, auto_config_backup
 
 
 logging.basicConfig(
@@ -33,6 +33,12 @@ async def lifespan(app: FastAPI):
         backup_database()
     except Exception:
         log.exception("startup backup failed (non-fatal)")
+    # Refresh the JSON config snapshot too, so the Settings UI shows a backup
+    # right away on a fresh install instead of "none yet" for up to a day.
+    try:
+        auto_config_backup()
+    except Exception:
+        log.exception("startup config backup failed (non-fatal)")
     configure_jobs()
     scheduler.start()
     await worker.start()
@@ -41,6 +47,12 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await worker.stop()
+        # shutdown(wait=False) cancels any in-flight async job; APScheduler logs
+        # that cancellation as an ERROR-with-traceback ("Error running job
+        # sync-all-channels … CancelledError"). It's benign — those jobs are
+        # idempotent and resume next tick — but the noise masks real errors, so
+        # quiet the executor logger for the teardown.
+        logging.getLogger("apscheduler.executors.default").setLevel(logging.CRITICAL)
         scheduler.shutdown(wait=False)
         # Final shutdown snapshot — defends against the unlucky "container
         # restarted mid-WAL" path that triggered the 2026-05-29 corruption.

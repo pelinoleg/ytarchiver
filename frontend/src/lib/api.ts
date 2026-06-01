@@ -461,7 +461,30 @@ export const backupApi = {
     { method: "POST", body: JSON.stringify({ url, kind: "channel" }) }),
   previewPlaylist: (url: string) => request<PlaylistPreview>(`/api/backup/preview`,
     { method: "POST", body: JSON.stringify({ url, kind: "playlist" }) }),
+
+  // Automatic daily backup — a single latest JSON copy kept on disk.
+  autoStatus: () => request<AutoBackupStatus>(`/api/backup/auto`),
+  autoContent: () => request<{
+    version?: number;
+    exported_at?: string;
+    folders?: Array<Record<string, unknown>>;
+    channels?: Array<Record<string, unknown>>;
+    playlists?: Array<Record<string, unknown>>;
+    settings?: Record<string, unknown>;
+  }>(`/api/backup/auto/content`),
+  autoDownloadUrl: () => `/api/backup/auto/download`,
+  autoRun: () => request<{ status: string }>(`/api/backup/auto/run`, { method: "POST" }),
 };
+
+export interface AutoBackupStatus {
+  exists: boolean;
+  exported_at?: string;
+  channels?: number;
+  playlists?: number;
+  folders?: number;
+  settings?: number;
+  size_bytes?: number;
+}
 
 export interface QueueStatus {
   paused: boolean;

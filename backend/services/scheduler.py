@@ -176,6 +176,17 @@ def configure_jobs() -> None:
         coalesce=True,
         next_run_time=None,
     )
+    # Daily JSON config backup — overwrites the single latest copy on disk.
+    # Unlike db-backup this one runs on the interval (lifespan also takes one at
+    # startup so the very first copy lands immediately, not 24h later).
+    scheduler.add_job(
+        backup_job.auto_config_backup,
+        trigger=IntervalTrigger(days=1, jitter=900),
+        id="config-backup",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     log.info(
         "scheduler: sync every %d min (+/- %d) · sponsorblock 24h · cleanup 24h · yt-dlp update 7d",
         settings.sync_interval_minutes, settings.sync_jitter_minutes,

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, Loader2, CheckCircle2, Trash2, ChevronDown, ChevronUp, Wrench, Download as DownloadIcon, Upload, ShieldCheck } from "lucide-react";
+import { Save, Loader2, CheckCircle2, Trash2, ChevronDown, ChevronUp, Wrench, Download as DownloadIcon, Upload, ShieldCheck, RotateCcw, Clock } from "lucide-react";
 import { settingsApi, maintenanceApi, backupApi, type GlobalSettings, type ImportReport, type Quality } from "../lib/api";
 import { ImportReviewModal, type ImportPayload } from "../components/ImportReviewModal";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
@@ -575,12 +575,33 @@ function AdvancedSection({
   );
 }
 
+function formatBackupDate(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 function BackupSection() {
+  const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [review, setReview] = useState<ImportPayload | null>(null);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [error,  setError]  = useState<string | null>(null);
   const [busy,   setBusy]   = useState(false);
+  const [restoring, setRestoring] = useState(false);
+
+  const { data: auto } = useQuery({ queryKey: ["backup-auto"], queryFn: backupApi.autoStatus });
+
+  const runNow = useMutation({
+    mutationFn: () => backupApi.autoRun(),
+    onSuccess: () => {
+      // The write happens in a background task; give it a beat, then refresh.
+      setTimeout(() => qc.invalidateQueries({ queryKey: ["backup-auto"] }), 800);
+    },
+  });
 
   async function onFile(file: File) {
     setBusy(true);
@@ -599,6 +620,21 @@ function BackupSection() {
     }
   }
 
+  // Restore = pull the latest auto-snapshot and drop it into the same review
+  // modal the manual import uses, so the user confirms before anything changes.
+  async function onRestore() {
+    setRestoring(true);
+    setReport(null); setError(null);
+    try {
+      const json = await backupApi.autoContent();
+      setReview(json as ImportPayload);
+    } catch (e) {
+      setError((e as Error)?.message ?? "Couldn't load the automatic backup");
+    } finally {
+      setRestoring(false);
+    }
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl bg-zinc-900">
       <div className="border-b border-white/5 px-4 py-3 sm:px-5">
@@ -612,6 +648,42 @@ function BackupSection() {
         </p>
       </div>
       <div className="divide-y divide-zinc-800">
+        <Row
+          label="Автоматический бэкап"
+          hint={
+            auto?.exists
+              ? `Раз в сутки сохраняется одна свежая копия конфигурации. Последняя: ${formatBackupDate(auto.exported_at)} · ${auto.channels ?? 0} каналов · ${auto.playlists ?? 0} плейлистов.`
+              : "Раз в сутки сохраняется одна свежая копия конфигурации. Пока не создан — нажми «Сделать сейчас»."
+          }
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => runNow.mutate()}
+              disabled={runNow.isPending}
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-800 px-4 py-1.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
+            >
+              {runNow.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+              Сделать сейчас
+            </button>
+            <a
+              href={backupApi.autoDownloadUrl()}
+              className={`inline-flex items-center gap-2 rounded-full bg-zinc-800 px-4 py-1.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 ${auto?.exists ? "" : "pointer-events-none opacity-50"}`}
+            >
+              <DownloadIcon className="h-4 w-4" />
+              Скачать
+            </a>
+            <button
+              type="button"
+              onClick={onRestore}
+              disabled={restoring || !auto?.exists}
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-800 px-4 py-1.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
+            >
+              {restoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+              Восстановить
+            </button>
+          </div>
+        </Row>
         <Row label="Export" hint="Скачать всё в один файл. Безопасно держать в Dropbox / iCloud.">
           <a
             href={backupApi.exportUrl()}

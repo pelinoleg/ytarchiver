@@ -15,81 +15,27 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from db.database import DB, get_db
-from services import sync, playlist_sync, ytdlp_service
+from services import sync, playlist_sync, ytdlp_service, backup_job
 
 
 router = APIRouter()
 log = logging.getLogger(__name__)
 
 
-EXPORT_VERSION = 2
+EXPORT_VERSION = backup_job.EXPORT_VERSION
 
 
 # ── Export ──────────────────────────────────────────────────────────────────────
 
 
-def _channel_export(row, folder_name_by_id: dict[int, str]) -> dict:
-    """Include user-facing metadata (name, thumbnail) so the importer can
-    render a nice review modal without having to re-fetch every channel."""
-    folder = folder_name_by_id.get(row["folder_id"]) if row["folder_id"] else None
-    return {
-        "url":                   row["url"],
-        "name":                  row["name"],
-        "thumbnail_url":         row["thumbnail_url"],
-        "subscriber_count":      row["subscriber_count"],
-        "download_policy":       row["download_policy"],
-        "quality":               row["quality"],
-        "retention_days":        row["retention_days"],
-        "sync_interval_minutes": row["sync_interval_minutes"],
-        "show_on_home":          bool(row["show_on_home"]),
-        "latest_count":          row["latest_count"],
-        "download_from_date":    row["download_from_date"],
-        "folder":                folder,
-    }
-
-
-def _playlist_export(row) -> dict:
-    return {
-        "url":                 row["url"],
-        "title":               row["title"],
-        "thumbnail_url":       row["thumbnail_url"],
-        "uploader":            row["uploader"],
-        "video_count":         row["video_count"],
-        "quality":             row["quality"],
-        "retention_days":      row["retention_days"],
-        "keep_videos_forever": bool(row["keep_videos_forever"]),
-        "is_music":            bool(row["is_music"]),
-    }
-
-
-def _folder_export(row) -> dict:
-    return {
-        "name":     row["name"],
-        "position": row["position"],
-    }
-
-
 @router.get("/export")
 def export_all(db: DB = Depends(get_db)):
-    folders = list(db.list_channel_folders())
-    folder_name_by_id = {r["id"]: r["name"] for r in folders}
-    channels  = [_channel_export(r, folder_name_by_id) for r in db.list_channels()]
-    playlists = [_playlist_export(r) for r in db.conn.execute(
-        "SELECT * FROM playlists ORDER BY id"
-    ).fetchall()]
-    settings_kv = db.get_settings()
-    payload = {
-        "version":     EXPORT_VERSION,
-        "exported_at": datetime.utcnow().isoformat() + "Z",
-        "folders":     [_folder_export(r) for r in folders],
-        "channels":    channels,
-        "playlists":   playlists,
-        "settings":    settings_kv,
-    }
+    # Same payload the daily auto-backup writes to disk — built in one place.
+    payload = backup_job.build_config_payload(db)
     # Force the browser to download instead of preview.
     return JSONResponse(
         content=payload,
@@ -97,6 +43,51 @@ def export_all(db: DB = Depends(get_db)):
             "Content-Disposition": f"attachment; filename=ytarchive-backup-{datetime.utcnow():%Y%m%d-%H%M%S}.json",
         },
     )
+
+
+# ── Automatic backup (daily, single latest copy on disk) ─────────────────────────
+
+
+@router.get("/auto")
+def auto_status():
+    """Lightweight status for the Settings UI — does a backup exist, and when."""
+    data = backup_job.read_auto_config()
+    if not data:
+        return {"exists": False}
+    p = backup_job.auto_config_path()
+    return {
+        "exists":      True,
+        "exported_at": data.get("exported_at"),
+        "channels":    len(data.get("channels") or []),
+        "playlists":   len(data.get("playlists") or []),
+        "folders":     len(data.get("folders") or []),
+        "settings":    len(data.get("settings") or {}),
+        "size_bytes":  p.stat().st_size if p.exists() else 0,
+    }
+
+
+@router.get("/auto/content")
+def auto_content():
+    """Full payload, fed straight into the import-review modal for a restore."""
+    data = backup_job.read_auto_config()
+    if not data:
+        raise HTTPException(404, "No automatic backup has been written yet")
+    return data
+
+
+@router.get("/auto/download")
+def auto_download():
+    p = backup_job.auto_config_path()
+    if not p.exists():
+        raise HTTPException(404, "No automatic backup has been written yet")
+    return FileResponse(p, media_type="application/json", filename="ytarchive-auto-backup.json")
+
+
+@router.post("/auto/run")
+def auto_run(bg: BackgroundTasks):
+    """Write a fresh snapshot now instead of waiting for the daily tick."""
+    bg.add_task(backup_job.auto_config_backup)
+    return {"status": "started"}
 
 
 # ── Import ──────────────────────────────────────────────────────────────────────
