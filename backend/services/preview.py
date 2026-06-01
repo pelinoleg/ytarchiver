@@ -36,6 +36,7 @@ PREVIEW_SEG_LEN   = 1.0    # seconds per clip
 PREVIEW_WIDTH     = 480    # cards are ~320-360px wide, 480 looks crisp on retina
 PREVIEW_CRF       = 27     # 23 = visually lossless, 28 = small. 27 = balance
 PREVIEW_FPS       = 18
+PREVIEW_TIMEOUT   = 900    # seconds; long videos on CPU-capped Pi need >180
 PREVIEW_FILENAME  = "preview.mp4"
 MIN_DURATION      = 30     # don't bother for very short videos
 
@@ -49,6 +50,9 @@ def make_preview(video_path: str, output_path: str, duration_seconds: Optional[f
     width    = _kv_int("preview_width",    PREVIEW_WIDTH)
     crf      = _kv_int("preview_crf",      PREVIEW_CRF)
     segments = _kv_int("preview_segments", PREVIEW_SEGMENTS)
+    # Whole input is decoded by the select filter, so long videos on a
+    # CPU-capped container can exceed the old hardcoded 180s. Configurable now.
+    timeout  = _kv_int("preview_timeout",  PREVIEW_TIMEOUT)
 
     margin = duration_seconds * 0.05
     usable = duration_seconds - 2 * margin
@@ -74,7 +78,7 @@ def make_preview(video_path: str, output_path: str, duration_seconds: Optional[f
         output_path,
     ]
     try:
-        result = subprocess.run(cmd, capture_output=True, timeout=180, text=True)
+        result = subprocess.run(cmd, capture_output=True, timeout=timeout, text=True)
     except subprocess.TimeoutExpired:
         log.warning("preview: timed out for %s", video_path)
         return False
