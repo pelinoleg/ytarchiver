@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from services.ytdlp_service import managed_cookies_path, yt_opts_extra
+from services.ytdlp_service import managed_cookies_path, yt_opts_extra, cookie_opts
 
 
 router = APIRouter()
@@ -84,17 +84,26 @@ def test_cookies():
     threadpool (sync def), so it won't block the event loop."""
     import yt_dlp
 
+    # Force cookies on for the probe — the whole point is to verify them.
+    cookies = cookie_opts()
     opts = {
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "socket_timeout": 20,
         **yt_opts_extra(),
+        **cookies,
     }
-    using_cookies = "cookiefile" in opts
+    using_cookies = bool(cookies)
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(f"https://www.youtube.com/watch?v={_TEST_VIDEO}", download=False)
+            # process=False: we only care that *extraction* (which needs to get
+            # past the auth / bot wall) succeeds — skip format selection so a
+            # harmless "requested format not available" doesn't read as failure.
+            info = ydl.extract_info(
+                f"https://www.youtube.com/watch?v={_TEST_VIDEO}",
+                download=False, process=False,
+            )
         return {"ok": True, "using_cookies": using_cookies, "title": (info or {}).get("title")}
     except Exception as e:
         msg = str(e)

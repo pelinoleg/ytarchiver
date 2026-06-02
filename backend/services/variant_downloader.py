@@ -17,7 +17,7 @@ import yt_dlp
 from config import settings
 from db.database import get_connection, DB
 from services.downloader import build_format_string
-from services.ytdlp_service import yt_opts_extra
+from services.ytdlp_service import yt_opts_extra, extract_info
 from services.worker import is_paused
 
 
@@ -83,8 +83,7 @@ def download_variant(*, video_id: str, channel_id: int, height: int) -> None:
         log.info("variant download: %s @ %dp → %s", video_id, height, target)
 
         try:
-            with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
-                ydl.extract_info(url, download=True)
+            extract_info(url, {**opts, **yt_opts_extra()}, download=True)
         except Exception as e:
             log.exception("variant download failed for %s @ %dp", video_id, height)
             db.set_variant_status(variant["id"], "error", error_message=str(e)[:500])

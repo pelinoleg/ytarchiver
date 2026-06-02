@@ -8,7 +8,7 @@ from typing import Callable, Optional
 
 import yt_dlp
 
-from services.ytdlp_service import yt_opts_extra
+from services.ytdlp_service import yt_opts_extra, extract_info
 from db.database import get_connection
 
 
@@ -160,8 +160,7 @@ def download_video(
     url = f"https://www.youtube.com/watch?v={video_id}"
     log.info("download: %s quality=%s → %s", video_id, quality, output_dir)
 
-    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
-        info = ydl.extract_info(url, download=True)
+    info = extract_info(url, {**opts, **yt_opts_extra()}, download=True)
 
     return {
         "info": info or {},

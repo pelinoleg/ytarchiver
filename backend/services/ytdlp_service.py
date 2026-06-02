@@ -23,36 +23,58 @@ def managed_cookies_path() -> Path:
 
 
 def yt_opts_extra() -> dict:
-    """Common yt-dlp options that should apply to every YouTube call:
-    cookies file (if configured), alt player_client (if configured). Merge
-    this into the opts dict of any ``yt_dlp.YoutubeDL(opts)`` call so the
-    backend behaves consistently across metadata fetches, downloads, and
-    variant pulls.
-
-    Both knobs target the "Sign in to confirm you're not a bot" wall that
-    YouTube throws at data-center IPs. Cookies are the gold standard.
+    """Non-cookie options applied to every YouTube call (alt player_client if
+    configured). Cookies are deliberately NOT included here — see
+    :func:`extract_info`, which adds them only as a bot-wall fallback.
     """
     out: dict = {}
-    # Managed cookies written via the Settings UI live at <data_dir>/cookies.txt
-    # and take precedence over the env-configured path — so the user can paste
-    # cookies in the browser and have them apply without an env edit or restart.
-    managed = managed_cookies_path()
-    if managed.exists() and managed.is_file() and managed.stat().st_size > 0:
-        out["cookiefile"] = str(managed)
-    elif settings.cookies_file:
-        # Allow env-injection of either the path literal or a value that
-        # equals the host-side mount. Skip silently when the file is
-        # missing so the backend still boots without it.
-        p = Path(os.path.expanduser(settings.cookies_file))
-        if p.exists() and p.is_file():
-            out["cookiefile"] = str(p)
-        else:
-            log.warning("cookies_file=%s does not exist; skipping", settings.cookies_file)
     if settings.youtube_player_client:
         out["extractor_args"] = {
             "youtube": {"player_client": [settings.youtube_player_client]},
         }
     return out
+
+
+def cookie_opts() -> dict:
+    """yt-dlp cookie option, if a cookies file is available. Managed file
+    (Settings UI, <data_dir>/cookies.txt) wins over the env-configured path."""
+    managed = managed_cookies_path()
+    if managed.exists() and managed.is_file() and managed.stat().st_size > 0:
+        return {"cookiefile": str(managed)}
+    if settings.cookies_file:
+        p = Path(os.path.expanduser(settings.cookies_file))
+        if p.exists() and p.is_file():
+            return {"cookiefile": str(p)}
+        log.warning("cookies_file=%s does not exist; skipping", settings.cookies_file)
+    return {}
+
+
+_BOT_WALL_MARKERS = ("sign in to confirm", "not a bot", "confirm you're not a bot")
+
+
+def _is_bot_wall(err: Exception) -> bool:
+    s = str(err).lower()
+    return any(m in s for m in _BOT_WALL_MARKERS)
+
+
+def extract_info(url: str, opts: dict, *, download: bool = False, process: bool = True):
+    """``YoutubeDL.extract_info`` with cookies used ONLY as a bot-wall fallback.
+
+    We try anonymously first because an authenticated YouTube session often
+    returns storyboard-only formats (no video/audio), which breaks downloads on
+    clips that work fine without cookies. Cookies are added on a retry only when
+    the anonymous attempt hits the "Sign in to confirm you're not a bot" wall.
+    """
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            return ydl.extract_info(url, download=download, process=process)
+    except Exception as e:
+        cookies = cookie_opts()
+        if not cookies or not _is_bot_wall(e):
+            raise
+        log.info("yt-dlp: bot wall on %s — retrying with cookies", url)
+        with yt_dlp.YoutubeDL({**opts, **cookies}) as ydl:
+            return ydl.extract_info(url, download=download, process=process)
 
 
 # Channel-page subpaths yt-dlp accepts. We pin to /videos to exclude Shorts/Live tabs.
@@ -79,8 +101,7 @@ def fetch_playlist_info(url: str) -> dict:
         "extract_flat": True, "skip_download": True,
         "playlistend": 1,  # we only need the playlist-level metadata
     }
-    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
-        info = ydl.extract_info(url, download=False) or {}
+    info = extract_info(url, {**opts, **yt_opts_extra()}, download=False) or {}
     return {
         "yt_playlist_id": info.get("id"),
         "title":          info.get("title") or "Untitled playlist",
@@ -106,8 +127,7 @@ def fetch_playlist_videos(url: str, *, max_videos: int = 5000) -> list[dict]:
         "ignoreerrors": True,
         "playlistend": max_videos,
     }
-    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
-        info = ydl.extract_info(url, download=False) or {}
+    info = extract_info(url, {**opts, **yt_opts_extra()}, download=False) or {}
     entries = info.get("entries") or []
     out: list[dict] = []
     for i, e in enumerate(entries):
@@ -132,8 +152,9 @@ def fetch_video_info(video_id: str) -> dict:
     """Metadata for a single video — no download. Used by the manual-add flow."""
     opts = {"quiet": True, "no_warnings": True, "skip_download": True}
     url = f"https://www.youtube.com/watch?v={video_id}"
-    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
-        info = ydl.extract_info(url, download=False)
+    # process=False: metadata only — skip format selection so a cookie-induced
+    # "requested format not available" can't break the add flow.
+    info = extract_info(url, {**opts, **yt_opts_extra()}, download=False, process=False)
     info = info or {}
     return {
         "id": info.get("id") or video_id,
@@ -173,8 +194,7 @@ def fetch_channel_info(url: str) -> dict:
         "playlistend": 1,
         "skip_download": True,
     }
-    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
-        info = ydl.extract_info(url, download=False)
+    info = extract_info(url, {**opts, **yt_opts_extra()}, download=False)
     return {
         "yt_channel_id": info.get("channel_id") or info.get("uploader_id") or info.get("id"),
         "name": info.get("channel") or info.get("uploader") or info.get("title") or "Unknown channel",
@@ -201,8 +221,7 @@ def fetch_channel_videos_flat(
         "playlistend": max_videos,
         "skip_download": True,
     }
-    with yt_dlp.YoutubeDL({**opts, **yt_opts_extra()}) as ydl:
-        info = ydl.extract_info(url, download=False)
+    info = extract_info(url, {**opts, **yt_opts_extra()}, download=False)
 
     entries = (info or {}).get("entries") or []
     videos: list[dict] = []
