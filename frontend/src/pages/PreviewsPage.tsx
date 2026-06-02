@@ -81,13 +81,14 @@ export function PreviewsPage() {
             </div>
           </div>
 
-          {/* Now generating — which clip + live percent. */}
+          {/* Now generating — which clip is being built. ffmpeg decodes the
+              whole source for the mosaic, so there's no honest linear percent;
+              show an indeterminate "working" bar instead of a fake number. */}
           {status.current && (
             <div className="mb-5 overflow-hidden rounded-2xl bg-sky-500/10 p-4 ring-1 ring-sky-500/25 sm:p-5">
               <div className="mb-2 flex items-center gap-2 text-sm">
                 <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
-                <span className="font-medium text-sky-100">Сейчас генерируется</span>
-                <span className="ml-auto text-xs tabular-nums text-sky-300">{status.current.percent}%</span>
+                <span className="font-medium text-sky-100">Сейчас генерируется превью</span>
               </div>
               <Link
                 to={`/watch/${status.current.video_id}`}
@@ -96,11 +97,8 @@ export function PreviewsPage() {
               >
                 {status.current.title}
               </Link>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-800">
-                <div
-                  className="h-full rounded-full bg-sky-400 transition-[width] duration-500"
-                  style={{ width: `${status.current.percent}%` }}
-                />
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+                <div className="h-full w-full rounded-full bg-gradient-to-r from-sky-500/40 via-sky-400 to-sky-500/40 animate-pulse" />
               </div>
             </div>
           )}
