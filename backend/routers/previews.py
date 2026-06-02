@@ -22,6 +22,8 @@ def status(db: DB = Depends(get_db)):
         **counts,
         "min_duration":  preview_service.MIN_DURATION,
         "max_attempts":  preview_service.MAX_PREVIEW_ATTEMPTS,
+        # The clip being generated right now (if any) + its live percent.
+        "current":       preview_service.current_build(),
     }
 
 

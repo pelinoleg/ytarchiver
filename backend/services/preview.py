@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -15,6 +16,37 @@ from db.database import DB, get_connection
 
 
 log = logging.getLogger(__name__)
+
+
+# ── Live "what's building right now" state ───────────────────────────────────
+# The backfill job runs in-process (APScheduler executor thread), so a simple
+# module-level dict is readable from the API request handlers under the GIL.
+_state_lock = threading.Lock()
+_current: Optional[dict] = None   # {"video_id", "title", "percent"}
+
+
+def _set_current(video_id: str, title: Optional[str]) -> None:
+    global _current
+    with _state_lock:
+        _current = {"video_id": video_id, "title": title or video_id, "percent": 0}
+
+
+def _set_percent(pct: float) -> None:
+    with _state_lock:
+        if _current is not None:
+            _current["percent"] = max(0, min(99, int(pct)))
+
+
+def _clear_current() -> None:
+    global _current
+    with _state_lock:
+        _current = None
+
+
+def current_build() -> Optional[dict]:
+    """The preview being generated right now (video_id, title, percent), or None."""
+    with _state_lock:
+        return dict(_current) if _current else None
 
 
 def _kv_int(key: str, default: int) -> int:
@@ -86,21 +118,64 @@ def make_preview(
         "-crf", str(crf),
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
+        # Machine-readable progress on stdout so we can report a live percent.
+        "-progress", "pipe:1", "-nostats",
         output_path,
     ]
     try:
-        result = subprocess.run(cmd, capture_output=True, timeout=timeout, text=True)
-    except subprocess.TimeoutExpired:
-        log.warning("preview: timed out for %s", video_path)
-        return False, f"ffmpeg timed out after {timeout}s"
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     except Exception as e:
         log.exception("preview: failed to spawn ffmpeg for %s", video_path)
         return False, f"ffmpeg spawn failed: {str(e)[:120]}"
 
-    if result.returncode != 0:
-        tail = (result.stderr or "").strip()[-200:]
-        log.warning("preview: ffmpeg rc=%d stderr=%s", result.returncode, tail)
-        return False, f"ffmpeg rc={result.returncode}: {tail}" if tail else f"ffmpeg rc={result.returncode}"
+    # Hard timeout via a watchdog that kills the process.
+    killed = {"v": False}
+    def _kill():
+        killed["v"] = True
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    timer = threading.Timer(timeout, _kill)
+    timer.start()
+
+    # Drain stderr in a thread so a full pipe can never deadlock the read loop.
+    stderr_parts: list[str] = []
+    def _drain():
+        if proc.stderr:
+            for ln in proc.stderr:
+                stderr_parts.append(ln)
+    drainer = threading.Thread(target=_drain, daemon=True)
+    drainer.start()
+
+    # The select filter decodes the whole input, so out_time tracks the input
+    # position → a faithful progress percent against the source duration.
+    total_us = float(duration_seconds) * 1_000_000
+    try:
+        if proc.stdout:
+            for line in proc.stdout:
+                line = line.strip()
+                if line.startswith("out_time_us=") or line.startswith("out_time_ms="):
+                    try:
+                        val = int(line.split("=", 1)[1])
+                    except (ValueError, IndexError):
+                        continue
+                    us = val if line.startswith("out_time_us=") else val * 1000
+                    if total_us > 0:
+                        _set_percent(us / total_us * 100)
+        proc.wait()
+    finally:
+        timer.cancel()
+        drainer.join(timeout=2)
+
+    stderr = "".join(stderr_parts)
+    if killed["v"]:
+        log.warning("preview: timed out for %s", video_path)
+        return False, f"ffmpeg timed out after {timeout}s"
+    if proc.returncode != 0:
+        tail = stderr.strip()[-200:]
+        log.warning("preview: ffmpeg rc=%d stderr=%s", proc.returncode, tail)
+        return False, f"ffmpeg rc={proc.returncode}: {tail}" if tail else f"ffmpeg rc={proc.returncode}"
     out = Path(output_path)
     if not out.exists() or out.stat().st_size < 1024:
         log.warning("preview: output missing or tiny for %s", video_path)
@@ -127,7 +202,7 @@ def build_preview_for_video(video_id: str) -> bool:
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT file_path, duration FROM videos WHERE video_id = ?",
+            "SELECT file_path, duration, title FROM videos WHERE video_id = ?",
             (video_id,),
         ).fetchone()
     finally:
@@ -140,7 +215,11 @@ def build_preview_for_video(video_id: str) -> bool:
         _record_preview_failure(video_id, "source file not found on disk")
         return False
     out = src.parent / PREVIEW_FILENAME
-    ok, reason = make_preview(str(src), str(out), row["duration"])
+    _set_current(video_id, row["title"])
+    try:
+        ok, reason = make_preview(str(src), str(out), row["duration"])
+    finally:
+        _clear_current()
     if not ok:
         _record_preview_failure(video_id, reason)
         return False

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Music, Play, Shuffle, ListMusic, Search, Inbox, Star,
   Infinity as InfinityIcon, MoreVertical, MinusCircle,
-  Plus, Check, ArrowDownUp, ArrowUp, ArrowDown, Loader2,
+  Plus, Check, ArrowDownUp, ArrowUp, ArrowDown, Loader2, CheckCircle2,
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import {
@@ -11,6 +11,7 @@ import {
   type MusicCollection, type Playlist, type Video,
 } from "../lib/api";
 import { AddToPlaylistList } from "../components/AddToPlaylistButton";
+import { useSelection } from "../components/SelectionProvider";
 import { formatBytes, formatDuration, formatUploadDate, timeAgo } from "../lib/format";
 import { setMusicQueue, shuffleArray, getMusicShuffle, setMusicShuffle } from "../lib/queue";
 import { VirtualVideoGrid } from "../components/VirtualVideoGrid";
@@ -799,6 +800,12 @@ function MusicTrackCard({
   const thumb = t.thumbnail_path ? thumbUrl(t.video_id) : t.thumbnail_url;
   const [previewing, setPreviewing] = useState(false);
   const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Multi-select — Cmd/Ctrl-click (desktop) or long-press (touch) toggles the
+  // shared global selection; the SelectionBar then offers bulk actions.
+  const { inSelectMode, isSelected, toggle } = useSelection();
+  const selected = isSelected(t.id);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressClickRef = useRef(false);
 
   // Star toggle — primary fav/unfav target on the music page. Optimistic
   // local update via setQueryData so the star fills/empties without a
@@ -813,10 +820,11 @@ function MusicTrackCard({
 
   useEffect(() => () => {
     if (enterTimer.current) clearTimeout(enterTimer.current);
+    if (pressTimer.current) clearTimeout(pressTimer.current);
   }, []);
 
   function onEnter() {
-    if (!t.has_preview) return;
+    if (!t.has_preview || inSelectMode) return;
     if (enterTimer.current) clearTimeout(enterTimer.current);
     enterTimer.current = setTimeout(() => setPreviewing(true), PREVIEW_DELAY_MS);
   }
@@ -824,19 +832,43 @@ function MusicTrackCard({
     if (enterTimer.current) clearTimeout(enterTimer.current);
     setPreviewing(false);
   }
+  // Long-press on touch enters select mode (desktop uses Cmd/Ctrl-click).
+  function onPointerDown(e: React.PointerEvent) {
+    if (e.pointerType !== "touch") return;
+    pressTimer.current = setTimeout(() => {
+      suppressClickRef.current = true;
+      toggle(t);
+      try { navigator.vibrate?.(20); } catch { /* unsupported */ }
+    }, 450);
+  }
+  function cancelPress() {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+  }
+
+  function onCardClick(e: React.MouseEvent) {
+    if (suppressClickRef.current) { e.preventDefault(); e.stopPropagation(); suppressClickRef.current = false; return; }
+    // Cmd/Ctrl-click toggles selection even when not yet in select mode.
+    if ((e.metaKey || e.ctrlKey) && !inSelectMode) { e.preventDefault(); e.stopPropagation(); toggle(t); return; }
+    if (inSelectMode) { e.preventDefault(); e.stopPropagation(); toggle(t); return; }
+    onPlay();
+  }
 
   return (
     <div
       className="group relative block min-w-0"
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      onPointerDown={onPointerDown}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
+      onPointerLeave={cancelPress}
     >
       <button
-        onClick={onPlay}
+        onClick={onCardClick}
         className="block w-full min-w-0 text-left"
-        aria-label={`Play ${t.title}`}
+        aria-label={inSelectMode ? `Select ${t.title}` : `Play ${t.title}`}
       >
-        <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900">
+        <div className={`relative aspect-video overflow-hidden rounded-xl bg-zinc-900 ${selected ? "ring-2 ring-sky-400" : ""}`}>
           {thumb && (
             <img
               src={thumb}
@@ -913,7 +945,15 @@ function MusicTrackCard({
         </p>
       </button>
 
-      <TrackMenu video={t} />
+      {inSelectMode ? (
+        <div className={`absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full ${
+          selected ? "bg-sky-500 text-white" : "bg-black/70 text-zinc-300 ring-1 ring-zinc-500"
+        }`}>
+          {selected && <CheckCircle2 className="h-5 w-5" />}
+        </div>
+      ) : (
+        <TrackMenu video={t} />
+      )}
     </div>
   );
 }

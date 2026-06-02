@@ -459,6 +459,7 @@ export interface PreviewStatus {
   ineligible: number;
   min_duration: number;
   max_attempts: number;
+  current?: { video_id: string; title: string; percent: number } | null;
 }
 export interface PreviewFailure {
   video_id: string;

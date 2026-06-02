@@ -13,8 +13,8 @@ export function PreviewsPage() {
   const { data: status, isLoading } = useQuery({
     queryKey: ["previews", "status"],
     queryFn: previewsApi.status,
-    // Previews build in the background; poll so the bars move on their own.
-    refetchInterval: 5_000,
+    // Poll fast enough that the "now generating" percent moves smoothly.
+    refetchInterval: 2_000,
   });
   const { data: failures = [] } = useQuery({
     queryKey: ["previews", "failed"],
@@ -80,6 +80,30 @@ export function PreviewsPage() {
               />
             </div>
           </div>
+
+          {/* Now generating — which clip + live percent. */}
+          {status.current && (
+            <div className="mb-5 overflow-hidden rounded-2xl bg-sky-500/10 p-4 ring-1 ring-sky-500/25 sm:p-5">
+              <div className="mb-2 flex items-center gap-2 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin text-sky-300" />
+                <span className="font-medium text-sky-100">Сейчас генерируется</span>
+                <span className="ml-auto text-xs tabular-nums text-sky-300">{status.current.percent}%</span>
+              </div>
+              <Link
+                to={`/watch/${status.current.video_id}`}
+                className="line-clamp-1 text-sm text-zinc-100 hover:text-white"
+                title={status.current.title}
+              >
+                {status.current.title}
+              </Link>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-sky-400 transition-[width] duration-500"
+                  style={{ width: `${status.current.percent}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Buckets. */}
           <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
