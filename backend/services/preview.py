@@ -148,21 +148,22 @@ def make_preview(
     drainer = threading.Thread(target=_drain, daemon=True)
     drainer.start()
 
-    # The select filter decodes the whole input, so out_time tracks the input
-    # position → a faithful progress percent against the source duration.
-    total_us = float(duration_seconds) * 1_000_000
+    # ffmpeg's out_time is the OUTPUT (preview) timeline, not the input decode
+    # position — useless here. But the select windows are spread evenly across
+    # the whole input, so the count of emitted OUTPUT frames grows roughly in
+    # step with how far we've decoded through the source. Expected total ≈
+    # segments × fps × seg_len. Use frame= as the progress signal.
+    expected_frames = max(1.0, segments * PREVIEW_FPS * PREVIEW_SEG_LEN)
     try:
         if proc.stdout:
             for line in proc.stdout:
                 line = line.strip()
-                if line.startswith("out_time_us=") or line.startswith("out_time_ms="):
+                if line.startswith("frame="):
                     try:
-                        val = int(line.split("=", 1)[1])
+                        n = int(line.split("=", 1)[1])
                     except (ValueError, IndexError):
                         continue
-                    us = val if line.startswith("out_time_us=") else val * 1000
-                    if total_us > 0:
-                        _set_percent(us / total_us * 100)
+                    _set_percent(n / expected_frames * 100)
         proc.wait()
     finally:
         timer.cancel()
