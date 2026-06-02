@@ -29,23 +29,40 @@ class CookiesBody(BaseModel):
     content: str
 
 
+# YouTube login is proven by one of these cookies. ``LOGIN_INFO`` is the
+# YouTube-specific one; the others are the Google session cookies yt-dlp uses.
+_LOGIN_COOKIE_NAMES = {"LOGIN_INFO", "SID", "__Secure-1PSID", "SAPISID", "__Secure-1PAPISID"}
+
+
+def _cookie_names(p) -> set[str]:
+    names: set[str] = set()
+    try:
+        for ln in p.read_text(encoding="utf-8", errors="replace").splitlines():
+            if ln.strip() and not ln.lstrip().startswith("#"):
+                parts = ln.split("\t")
+                if len(parts) >= 7:
+                    names.add(parts[5])
+    except OSError:
+        pass
+    return names
+
+
 def _status() -> dict:
     p = managed_cookies_path()
     if p.exists() and p.is_file() and p.stat().st_size > 0:
         st = p.stat()
-        # Count cookie lines (non-comment, non-blank) for a friendly summary.
-        try:
-            lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
-            entries = sum(1 for ln in lines if ln.strip() and not ln.lstrip().startswith("#"))
-        except OSError:
-            entries = 0
+        names = _cookie_names(p)
         return {
             "configured": True,
             "size_bytes": st.st_size,
-            "entries":    entries,
+            "entries":    len(names),
             "updated_at": datetime.fromtimestamp(st.st_mtime, timezone.utc).isoformat(),
+            # Whether the export carries a YouTube login session. False here means
+            # account features (subscriptions / playlists import) won't work even
+            # though plain downloads might.
+            "has_login_cookies": bool(names & _LOGIN_COOKIE_NAMES),
         }
-    return {"configured": False, "size_bytes": 0, "entries": 0, "updated_at": None}
+    return {"configured": False, "size_bytes": 0, "entries": 0, "updated_at": None, "has_login_cookies": False}
 
 
 @router.get("")

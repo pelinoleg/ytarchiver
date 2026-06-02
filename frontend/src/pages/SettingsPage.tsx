@@ -646,6 +646,19 @@ function CookiesSection() {
           )}
         </div>
 
+        {/* Specific, actionable warning when the export lacks a login session. */}
+        {status?.configured && status.has_login_cookies === false && (
+          <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-300/90">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span>
+              В файле нет login-сессии YouTube (<code className="text-amber-200">LOGIN_INFO</code> / <code className="text-amber-200">SID</code> / <code className="text-amber-200">__Secure-1PSID</code>) —
+              есть только 3P-куки. Скачивание это починит, а <b>импорт подписок — нет</b>.
+              Убедись, что на <span className="text-amber-200">youtube.com</span> справа вверху виден твой <b>аватар</b> (ты залогинен в YouTube, не просто в Google),
+              и экспортируй cookies именно с открытой вкладки youtube.com.
+            </span>
+          </div>
+        )}
+
         {/* How-to */}
         <button
           type="button"

@@ -556,6 +556,7 @@ export interface CookiesStatus {
   size_bytes: number;
   entries: number;
   updated_at: string | null;
+  has_login_cookies?: boolean;
 }
 
 export const cookiesApi = {
