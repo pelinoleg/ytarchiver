@@ -104,14 +104,22 @@ def make_preview(
 
     spacing = usable / segments
     offsets = [margin + i * spacing for i in range(segments)]
-    expr = "+".join(
-        f"between(t,{off:.3f},{off + PREVIEW_SEG_LEN:.3f})" for off in offsets
-    )
 
-    cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-y",
-        "-i", video_path,
-        "-vf", f"select='{expr}',setpts=N/FRAME_RATE/TB,scale={width}:-2,fps={PREVIEW_FPS}",
+    # Seek to each segment with INPUT seeking (``-ss`` before ``-i``): ffmpeg
+    # jumps to the nearest keyframe and decodes only ~seg_len there, instead of
+    # decoding the whole file (the old ``select`` filter did, so a long video
+    # took minutes / timed out on the Pi). Each offset is a separate input; the
+    # concat filter stitches them into the mosaic.
+    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "warning", "-y"]
+    for off in offsets:
+        cmd += ["-ss", f"{off:.3f}", "-t", f"{PREVIEW_SEG_LEN:.3f}", "-i", video_path]
+    chains = "".join(
+        f"[{i}:v]scale={width}:-2,fps={PREVIEW_FPS},setsar=1[v{i}];" for i in range(segments)
+    )
+    concat_in = "".join(f"[v{i}]" for i in range(segments))
+    filtergraph = chains + f"{concat_in}concat=n={segments}:v=1:a=0[out]"
+    cmd += [
+        "-filter_complex", filtergraph, "-map", "[out]",
         "-an",
         "-c:v", "libx264",
         "-preset", "veryfast",

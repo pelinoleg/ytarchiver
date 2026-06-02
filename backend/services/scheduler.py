@@ -120,9 +120,11 @@ def configure_jobs() -> None:
         max_instances=1,
         coalesce=True,
     )
+    # Seek-based previews build in seconds, so we can clear a backlog faster:
+    # a bigger batch, more often. max_instances=1 still prevents pile-up.
     scheduler.add_job(
-        preview_service.backfill_missing_previews,
-        trigger=IntervalTrigger(minutes=15, jitter=120),
+        lambda: preview_service.backfill_missing_previews(12),
+        trigger=IntervalTrigger(minutes=7, jitter=60),
         id="preview-backfill",
         replace_existing=True,
         max_instances=1,
