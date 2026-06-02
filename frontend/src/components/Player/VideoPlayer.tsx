@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import {
   Play, Pause, Maximize, Minimize,
   PictureInPicture2, Subtitles, ListVideo, RotateCcw, RotateCw,
-  SkipForward, SkipBack, X, CircleHelp,
+  SkipForward, SkipBack, X, CircleHelp, Headphones,
 } from "lucide-react";
 import type { Chapter, SponsorSegment, Video, VideoVariant } from "../../lib/api";
 import { streamUrl, subtitleUrl, thumbUrl, variantsApi } from "../../lib/api";
@@ -48,6 +48,13 @@ interface Props {
   /** Fires when the <video> element raises an error event. ``message``
    *  is a best-effort human description (codec/network/etc). */
   onMediaError?: (message: string) => void;
+  /** Override the media source URL. When set (audio-only / traffic-saving
+   *  mode) it's used for both the <video> and the hidden <audio> instead of
+   *  the full-video stream, so only the audio track is downloaded. */
+  mediaSrc?: string | null;
+  /** When true the source is audio-only — render the cover art over the
+   *  (frameless) video so it reads as a music player, not a black box. */
+  audioOnly?: boolean;
 }
 
 export interface PlayerHandle {
@@ -68,7 +75,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     video, segments, initialRate, startAtSeconds,
     onPlaybackUpdate, onTick, onNext, onPrev, onEnded,
     alwaysShowControls = false, showPrevControl = false, onCollapseToMini,
-    onMediaError,
+    onMediaError, mediaSrc = null, audioOnly = false,
   },
   forwardedRef,
 ) {
@@ -1103,7 +1110,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     >
         <video
           ref={videoRef as React.RefObject<HTMLVideoElement>}
-          src={streamUrl(video.video_id, selectedHeight)}
+          src={mediaSrc ?? streamUrl(video.video_id, selectedHeight)}
           // Show the thumbnail while paused / pre-load — without this iOS
           // Safari renders a black square because autoplay is blocked.
           poster={video.thumbnail_path ? thumbUrl(video.video_id) : (video.thumbnail_url ?? undefined)}
@@ -1168,11 +1175,41 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
         {isMusicMode && (
           <audio
             ref={audioBackupRef}
-            src={streamUrl(video.video_id, selectedHeight)}
+            src={mediaSrc ?? streamUrl(video.video_id, selectedHeight)}
             preload="auto"
             className="hidden"
             aria-hidden
           />
+        )}
+
+        {/* Audio-only cover — the <video> plays an m4a so it renders no frames;
+         *  paint the artwork over it (blurred fill + centred cover) so it reads
+         *  as a music player. pointer-events-none keeps tap-to-play working. */}
+        {audioOnly && (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden bg-zinc-950 sm:rounded-xl">
+            {(video.thumbnail_path || video.thumbnail_url) && (
+              <>
+                <img
+                  src={video.thumbnail_path ? thumbUrl(video.video_id) : video.thumbnail_url!}
+                  referrerPolicy="no-referrer"
+                  alt=""
+                  className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-40"
+                />
+                <div className="absolute inset-0 grid place-items-center p-6">
+                  <img
+                    src={video.thumbnail_path ? thumbUrl(video.video_id) : video.thumbnail_url!}
+                    referrerPolicy="no-referrer"
+                    alt=""
+                    className="max-h-[70%] max-w-[70%] rounded-2xl object-contain shadow-2xl shadow-black/50 ring-1 ring-white/10"
+                  />
+                </div>
+              </>
+            )}
+            <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-semibold text-fuchsia-200 ring-1 ring-white/10 backdrop-blur-sm">
+              <Headphones className="h-3.5 w-3.5" />
+              Аудио
+            </span>
+          </div>
         )}
 
       {/* Center overlay: rewind / play / skip */}

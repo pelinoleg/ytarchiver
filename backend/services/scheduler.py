@@ -16,6 +16,7 @@ from services import (
     integrity,
     error_retry,
     backup_job,
+    audio as audio_service,
 )
 
 
@@ -123,6 +124,16 @@ def configure_jobs() -> None:
         preview_service.backfill_missing_previews,
         trigger=IntervalTrigger(minutes=15, jitter=120),
         id="preview-backfill",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    # Audio-only sidecars for music — extracted lazily so the player can stream
+    # just the audio track when the user turns on traffic-saving mode.
+    scheduler.add_job(
+        audio_service.backfill_missing_audio,
+        trigger=IntervalTrigger(minutes=20, jitter=180),
+        id="audio-backfill",
         replace_existing=True,
         max_instances=1,
         coalesce=True,

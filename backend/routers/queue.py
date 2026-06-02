@@ -26,9 +26,12 @@ def get_queue(db: DB = Depends(get_db)):
 @router.get("/status", response_model=QueueStatus)
 def queue_status(db: DB = Depends(get_db)):
     kv = db.get_settings()
+    # Count 'queued' alongside 'pending' — both are "waiting to download" and
+    # both show in list_active_queue, so the status number must include them or
+    # the sidebar/queue badge disagrees with the list it links to.
     counts = {r["status"]: r["c"] for r in db.conn.execute(
         "SELECT status, COUNT(*) AS c FROM videos "
-        "WHERE status IN ('pending', 'downloading', 'error') AND is_short = 0 "
+        "WHERE status IN ('pending', 'queued', 'downloading', 'error') AND is_short = 0 "
         "GROUP BY status"
     ).fetchall()}
     try:
@@ -37,7 +40,7 @@ def queue_status(db: DB = Depends(get_db)):
         max_concurrent = 1
     return QueueStatus(
         paused=str(kv.get(PAUSED_KEY) or "").strip().lower() in ("1", "true", "yes", "on"),
-        pending=counts.get("pending", 0),
+        pending=counts.get("pending", 0) + counts.get("queued", 0),
         downloading=counts.get("downloading", 0),
         error=counts.get("error", 0),
         max_concurrent=max_concurrent,

@@ -32,6 +32,8 @@ export function SelectionBar() {
     qc.invalidateQueries({ queryKey: ["favorites"] });
     qc.invalidateQueries({ queryKey: ["music"] });
     qc.invalidateQueries({ queryKey: ["queue"] });
+    qc.invalidateQueries({ queryKey: ["manual"] });
+    qc.invalidateQueries({ queryKey: ["stats"] });
   }
 
   const del = useMutation({

@@ -88,6 +88,7 @@ class VideoOut(BaseModel):
     chapters: Optional[list[dict[str, Any]]] = None
     has_subtitle: bool = False
     has_preview:  bool = False
+    has_audio:    bool = False
     added_at: Optional[str] = None
     downloaded_at: Optional[str] = None
     last_watched_at: Optional[str] = None
@@ -107,6 +108,9 @@ class VideoOut(BaseModel):
     # in several playlists reports the lowest playlist id.
     playlist_id: Optional[int] = None
     playlist_title: Optional[str] = None
+    # Ids of the user's local music collections this video belongs to. Only
+    # populated by the music list / collection / get_video queries.
+    collection_ids: list[int] = []
 
     @classmethod
     def from_row(cls, row):
@@ -118,6 +122,16 @@ class VideoOut(BaseModel):
                 pass
             try:
                 m.has_preview = bool(row["preview_path"])
+            except (KeyError, IndexError):
+                pass
+            try:
+                m.has_audio = bool(row["audio_path"])
+            except (KeyError, IndexError):
+                pass
+            try:
+                csv = row["collection_ids_csv"]
+                if csv:
+                    m.collection_ids = [int(x) for x in str(csv).split(",") if x]
             except (KeyError, IndexError):
                 pass
         return m

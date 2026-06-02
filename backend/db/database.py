@@ -217,6 +217,12 @@ _MIGRATIONS: list[tuple[str, list[str]]] = [
         "CREATE INDEX IF NOT EXISTS idx_music_collection_videos_pos "
         "  ON music_collection_videos(collection_id, position)",
     ]),
+    ("0023_audio_path", [
+        # Audio-only sidecar (m4a) extracted from the downloaded mp4 with
+        # ``ffmpeg -vn -c:a copy`` — lets the music player stream just the audio
+        # track to save bandwidth on cellular. NULL until extracted.
+        "ALTER TABLE videos ADD COLUMN audio_path TEXT",
+    ]),
 ]
 
 
@@ -231,6 +237,15 @@ IS_MUSIC_SQL = (
     "))"
 )
 NOT_MUSIC_SQL = f"NOT {IS_MUSIC_SQL}"
+
+
+# Comma-separated ids of the user's local music collections this video sits in.
+# Parsed back into a list by VideoOut.from_row so the UI can show membership
+# badges and toggle add/remove. Requires the ``v.`` alias on the videos table.
+COLLECTION_IDS_SQL = (
+    "(SELECT GROUP_CONCAT(cv.collection_id) FROM music_collection_videos cv "
+    " WHERE cv.video_id = v.video_id) AS collection_ids_csv"
+)
 
 
 _STOPWORDS = {
@@ -392,7 +407,8 @@ class DB:
             f"         SELECT 1 FROM playlist_videos pv "
             f"         JOIN playlists p ON p.id = pv.playlist_id "
             f"         WHERE pv.video_id = v.video_id AND p.is_music = 1"
-            f"       ) AS is_music_via_playlist "
+            f"       ) AS is_music_via_playlist, "
+            f"       {COLLECTION_IDS_SQL} "
             f"FROM videos v "
             f"LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.status = 'done' AND v.is_short = 0 "
@@ -518,7 +534,8 @@ class DB:
             f"         SELECT 1 FROM playlist_videos pv "
             f"         JOIN playlists p ON p.id = pv.playlist_id "
             f"         WHERE pv.video_id = v.video_id AND p.is_music = 1"
-            f"       ) AS is_music_via_playlist "
+            f"       ) AS is_music_via_playlist, "
+            f"       {COLLECTION_IDS_SQL} "
             f"FROM music_collection_videos cv "
             f"JOIN videos v ON v.video_id = cv.video_id "
             f"LEFT JOIN channels c ON c.id = v.channel_id "
@@ -807,7 +824,8 @@ class DB:
             "         SELECT 1 FROM playlist_videos pv "
             "         JOIN playlists p ON p.id = pv.playlist_id "
             "         WHERE pv.video_id = v.video_id AND p.is_music = 1"
-            "       ) AS is_music_via_playlist "
+            "       ) AS is_music_via_playlist, "
+            f"       {COLLECTION_IDS_SQL} "
             "FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
             "WHERE v.video_id = ?",
             (video_id,),

@@ -1,9 +1,10 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from db.database import DB, get_db
+from services import audio as audio_service
 
 
 router = APIRouter()
@@ -71,3 +72,22 @@ def stream_preview(video_id: str, db: DB = Depends(get_db)):
     if not p.exists():
         raise HTTPException(404)
     return FileResponse(str(p), media_type="video/mp4", headers={"Accept-Ranges": "bytes"})
+
+
+@router.get("/audio/{video_id}")
+def stream_audio(video_id: str, bg: BackgroundTasks, db: DB = Depends(get_db)):
+    """Serve the audio-only sidecar (m4a) for bandwidth-saving music playback.
+
+    If the sidecar hasn't been extracted yet, kick the extraction off in the
+    background and return 404 — the client falls back to the full-video stream
+    for this play and gets audio-only on the next one.
+    """
+    row = db.get_video(video_id)
+    if not row:
+        raise HTTPException(404, "Video not available")
+    ap = row["audio_path"]
+    if ap and Path(ap).exists():
+        return FileResponse(str(ap), media_type="audio/mp4", headers={"Accept-Ranges": "bytes"})
+    if row["file_path"]:
+        bg.add_task(audio_service.extract_audio_for_video, video_id)
+    raise HTTPException(404, "Audio sidecar not ready yet")

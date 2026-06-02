@@ -55,6 +55,9 @@ export interface Video {
   chapters: Chapter[] | null;
   has_subtitle: boolean;
   has_preview:  boolean;
+  /** True when an audio-only sidecar (m4a) exists — enables traffic-saving
+   *  music playback. */
+  has_audio?:   boolean;
   added_at: string | null;
   downloaded_at: string | null;
   last_watched_at: string | null;
@@ -70,6 +73,9 @@ export interface Video {
    *  the queue endpoint — used to group the Downloads page. */
   playlist_id?: number | null;
   playlist_title?: string | null;
+  /** Ids of the local music collections this video is in. Only populated by the
+   *  music list / collection / get_video endpoints; elsewhere undefined. */
+  collection_ids?: number[];
   // Transient: live download telemetry, populated from the WS hook only.
   // Not part of the server response shape.
   downloaded_bytes?: number;
@@ -83,6 +89,7 @@ export const streamUrl    = (videoId: string, height?: number | null) =>
 export const thumbUrl     = (videoId: string) => `/api/stream/thumbnail/${videoId}`;
 export const subtitleUrl  = (videoId: string) => `/api/stream/subtitle/${videoId}`;
 export const previewUrl   = (videoId: string) => `/api/stream/preview/${videoId}`;
+export const audioUrl     = (videoId: string) => `/api/stream/audio/${videoId}`;
 
 export interface GlobalSettings {
   default_quality: Quality;

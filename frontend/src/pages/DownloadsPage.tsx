@@ -321,11 +321,14 @@ function WaitingGroups({ items }: { items: Video[] }) {
     return [...map.values()].sort((a, b) => b.items.length - a.items.length);
   })();
 
-  // First group expanded by default, rest collapsed. User toggles override the
-  // default and are keyed by group id, so they survive the 3s refetch. We
-  // always render the group header (even for a single group) so the playlist
-  // name + download-progress bar stay visible.
+  // Groups are open by default when there are only a handful (≤3) — so a
+  // freshly-subscribed playlist's items are visible immediately instead of
+  // hiding behind a collapsed header that just shows a count ("+2 but no
+  // videos"). With many groups we open only the first to keep the DOM bounded.
+  // User toggles override the default, keyed by group id so they survive the
+  // 3s refetch.
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const defaultOpen = (i: number) => i === 0 || groups.length <= 3;
 
   return (
     <div className="space-y-2">
@@ -333,9 +336,9 @@ function WaitingGroups({ items }: { items: Video[] }) {
         <QueueGroup
           key={g.key}
           g={g}
-          open={overrides[g.key] ?? i === 0}
+          open={overrides[g.key] ?? defaultOpen(i)}
           playlist={g.kind === "playlist" ? plById.get(g.id) : undefined}
-          onToggle={() => setOverrides((o) => ({ ...o, [g.key]: !(o[g.key] ?? i === 0) }))}
+          onToggle={() => setOverrides((o) => ({ ...o, [g.key]: !(o[g.key] ?? defaultOpen(i)) }))}
         />
       ))}
     </div>

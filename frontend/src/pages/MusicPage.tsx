@@ -3,13 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Music, Play, Shuffle, ListMusic, Search, Inbox, Star,
   Infinity as InfinityIcon, MoreVertical, MinusCircle,
-  Plus, Check, ArrowDownUp, ListPlus, Loader2,
+  Plus, Check, ArrowDownUp, ArrowUp, ArrowDown, Loader2,
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import {
   musicApi, musicCollectionsApi, playlistsApi, videosApi, thumbUrl, previewUrl,
   type MusicCollection, type Playlist, type Video,
 } from "../lib/api";
+import { AddToPlaylistList } from "../components/AddToPlaylistButton";
 import { formatBytes, formatDuration, formatUploadDate, timeAgo } from "../lib/format";
 import { setMusicQueue, shuffleArray, getMusicShuffle, setMusicShuffle } from "../lib/queue";
 import { VirtualVideoGrid } from "../components/VirtualVideoGrid";
@@ -24,30 +25,33 @@ const VIRTUALIZE_THRESHOLD = 200;
 
 const PREVIEW_DELAY_MS = 400;
 
-type SortKey = "recent" | "oldest" | "title" | "duration" | "published";
+type SortField = "added" | "published" | "title" | "duration";
+type SortDir = "asc" | "desc";
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "recent",    label: "Сначала новые" },
-  { key: "oldest",    label: "Сначала старые" },
+const SORT_FIELDS: { key: SortField; label: string }[] = [
+  { key: "added",     label: "Дата добавления" },
   { key: "published", label: "Дата публикации" },
-  { key: "title",     label: "По названию" },
-  { key: "duration",  label: "По длительности" },
+  { key: "title",     label: "Название" },
+  { key: "duration",  label: "Длительность" },
 ];
 
-/** Sort a copy of the track list. "time" is the default lens (when the clip
- *  landed in the library); the rest are secondary. */
-function sortTracks(tracks: Video[], sort: SortKey): Video[] {
-  const out = [...tracks];
-  const added = (v: Video) => v.downloaded_at ?? "";
-  const published = (v: Video) => v.upload_timestamp ?? (v.upload_date ? Number(v.upload_date) : 0);
-  switch (sort) {
-    case "recent":    out.sort((a, b) => added(b).localeCompare(added(a))); break;
-    case "oldest":    out.sort((a, b) => added(a).localeCompare(added(b))); break;
-    case "published": out.sort((a, b) => Number(published(b)) - Number(published(a))); break;
-    case "title":     out.sort((a, b) => a.title.localeCompare(b.title)); break;
-    case "duration":  out.sort((a, b) => (b.duration ?? 0) - (a.duration ?? 0)); break;
+/** Ascending comparator per field; direction is applied by the caller. */
+function compareBy(field: SortField, a: Video, b: Video): number {
+  switch (field) {
+    case "added":     return (a.downloaded_at ?? "").localeCompare(b.downloaded_at ?? "");
+    case "published": {
+      const pa = a.upload_timestamp ?? (a.upload_date ? Number(a.upload_date) : 0);
+      const pb = b.upload_timestamp ?? (b.upload_date ? Number(b.upload_date) : 0);
+      return Number(pa) - Number(pb);
+    }
+    case "title":     return a.title.localeCompare(b.title);
+    case "duration":  return (a.duration ?? 0) - (b.duration ?? 0);
   }
-  return out;
+}
+
+function sortTracks(tracks: Video[], field: SortField, dir: SortDir): Video[] {
+  const sign = dir === "asc" ? 1 : -1;
+  return [...tracks].sort((a, b) => sign * compareBy(field, a, b));
 }
 
 export function MusicPage() {
@@ -66,8 +70,17 @@ export function MusicPage() {
     queryFn:  musicCollectionsApi.list,
   });
 
-  const [sort, setSort] = useState<SortKey>("recent");
-  const sortedTracks = sortTracks(tracks, sort);
+  // Sort field + direction persist per device (localStorage). Default: newest
+  // added first.
+  const [sortField, setSortField] = useState<SortField>(
+    () => ((typeof localStorage !== "undefined" && localStorage.getItem("music.sortField")) as SortField) || "added",
+  );
+  const [sortDir, setSortDir] = useState<SortDir>(
+    () => ((typeof localStorage !== "undefined" && localStorage.getItem("music.sortDir")) as SortDir) || "desc",
+  );
+  useEffect(() => { localStorage.setItem("music.sortField", sortField); }, [sortField]);
+  useEffect(() => { localStorage.setItem("music.sortDir", sortDir); }, [sortDir]);
+  const sortedTracks = sortTracks(tracks, sortField, sortDir);
 
   // Favorites — separate from the global Favorites page, which deliberately
   // hides music. Lives in its own section so the user has one obvious target
@@ -127,16 +140,17 @@ export function MusicPage() {
                 count={playlists.length + collections.length + (favorites.length > 0 ? 1 : 0)}
               />
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-                {/* Favorites — rendered first, styled like the other playlist
-                 *  cards so it lives in the same flow. Click to open Music
-                 *  with the favs queue. */}
+                {/* New-playlist tile first — the primary "make a collection"
+                 *  action sits at the front of the row. */}
+                <NewCollectionCard />
+                {/* Favorites — styled like the other playlist cards so it lives
+                 *  in the same flow. Click to open Music with the favs queue. */}
                 {favorites.length > 0 && (
                   <FavoritesPlaylistCard tracks={favorites} />
                 )}
                 {/* User-curated local playlists. */}
                 {collections.map((c) => <CollectionCard key={`c-${c.id}`} collection={c} />)}
                 {playlists.map((p) => <MusicPlaylistCard key={p.id} playlist={p} />)}
-                <NewCollectionCard />
               </div>
             </section>
           )}
@@ -145,12 +159,15 @@ export function MusicPage() {
             <section>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <SectionHeader icon={Music} title="Tracks" count={tracks.length} noMargin />
-                <SortMenu value={sort} onChange={setSort} />
+                <SortMenu
+                  field={sortField} dir={sortDir}
+                  onField={setSortField} onDir={setSortDir}
+                />
               </div>
               {sortedTracks.length > VIRTUALIZE_THRESHOLD ? (
                 <VirtualVideoGrid
                   // Key on the sort so the virtualizer rebuilds rows on re-sort.
-                  key={sort}
+                  key={`${sortField}-${sortDir}`}
                   items={sortedTracks}
                   breakpoints={trackBreakpoints}
                   minCardWidth={trackCardMin}
@@ -159,7 +176,6 @@ export function MusicPage() {
                   renderItem={(t, idx) => (
                     <MusicTrackCard
                       track={t}
-                      collections={collections}
                       onPlay={() => {
                         const ordered = [...allIds.slice(idx), ...allIds.slice(0, idx)];
                         setMusicQueue(ordered, false);
@@ -177,7 +193,6 @@ export function MusicPage() {
                     <MusicTrackCard
                       key={t.id}
                       track={t}
-                      collections={collections}
                       onPlay={() => {
                         const ordered = [...allIds.slice(idx), ...allIds.slice(0, idx)];
                         setMusicQueue(ordered, false);
@@ -225,19 +240,33 @@ function SectionHeader({
 // Sort menu — native select keeps it accessible and avoids extra popover
 // plumbing. Sorting is client-side over the already-fetched track list.
 
-function SortMenu({ value, onChange }: { value: SortKey; onChange: (k: SortKey) => void }) {
+function SortMenu({
+  field, dir, onField, onDir,
+}: {
+  field: SortField; dir: SortDir;
+  onField: (f: SortField) => void; onDir: (d: SortDir) => void;
+}) {
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-1.5 text-sm">
       <ArrowDownUp className="h-4 w-4 text-zinc-500" />
       <select
-        value={value}
-        onChange={(e) => onChange(e.target.value as SortKey)}
+        value={field}
+        onChange={(e) => onField(e.target.value as SortField)}
         className="rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-sm text-zinc-200 outline-none focus:border-zinc-600"
         aria-label="Сортировка"
       >
-        {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+        {SORT_FIELDS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
       </select>
-    </label>
+      <button
+        type="button"
+        onClick={() => onDir(dir === "asc" ? "desc" : "asc")}
+        className="grid h-8 w-8 place-items-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-600 hover:text-white"
+        title={dir === "asc" ? "По возрастанию — нажми для убывания" : "По убыванию — нажми для возрастания"}
+        aria-label="Направление сортировки"
+      >
+        {dir === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+      </button>
+    </div>
   );
 }
 
@@ -754,8 +783,8 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
 // menu to unmark the track (returns it to its normal home).
 
 function MusicTrackCard({
-  track: t, onPlay, collections,
-}: { track: Video; onPlay: () => void; collections: MusicCollection[] }) {
+  track: t, onPlay,
+}: { track: Video; onPlay: () => void }) {
   const qc = useQueryClient();
   const thumb = t.thumbnail_path ? thumbUrl(t.video_id) : t.thumbnail_url;
   const [previewing, setPreviewing] = useState(false);
@@ -834,6 +863,17 @@ function MusicTrackCard({
               {formatBytes(t.file_size_bytes, true)}
             </span>
           ) : null}
+          {/* In-playlist badge — shows the video already lives in N local
+              playlists. */}
+          {(t.collection_ids?.length ?? 0) > 0 && (
+            <span
+              className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-fuchsia-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white shadow"
+              title={`В плейлистах: ${t.collection_ids!.length}`}
+            >
+              <ListMusic className="h-3 w-3" />
+              {t.collection_ids!.length}
+            </span>
+          )}
 
           {/* Star — discreet top-left chip, always visible when favorited
               and fades in on hover otherwise. Lives on the thumb (not in the
@@ -863,12 +903,12 @@ function MusicTrackCard({
         </p>
       </button>
 
-      <TrackMenu video={t} collections={collections} />
+      <TrackMenu video={t} />
     </div>
   );
 }
 
-function TrackMenu({ video, collections }: { video: Video; collections: MusicCollection[] }) {
+function TrackMenu({ video }: { video: Video }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [subOpen, setSubOpen] = useState(false);
@@ -888,6 +928,8 @@ function TrackMenu({ video, collections }: { video: Video; collections: MusicCol
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["music"] });
       qc.invalidateQueries({ queryKey: ["videos"] });
+      // A previously-manual clip returns to Manual when unmarked.
+      qc.invalidateQueries({ queryKey: ["manual"] });
     },
   });
 
@@ -899,26 +941,7 @@ function TrackMenu({ video, collections }: { video: Video; collections: MusicCol
     },
   });
 
-  const addToCollection = useMutation({
-    mutationFn: (collectionId: number) => musicCollectionsApi.addVideo(collectionId, video.video_id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["music", "collections"] });
-      setOpen(false); setSubOpen(false);
-    },
-  });
-
-  const createAndAdd = useMutation({
-    mutationFn: async () => {
-      const name = window.prompt("Название нового плейлиста");
-      if (!name || !name.trim()) return;
-      const col = await musicCollectionsApi.create(name.trim());
-      await musicCollectionsApi.addVideo(col.id, video.video_id);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["music", "collections"] });
-      setOpen(false); setSubOpen(false);
-    },
-  });
+  const inPlaylists = video.collection_ids?.length ?? 0;
 
   return (
     <div ref={ref} className="absolute right-2 top-2">
@@ -930,7 +953,7 @@ function TrackMenu({ video, collections }: { video: Video; collections: MusicCol
         <MoreVertical className="h-4 w-4" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 w-60 overflow-hidden rounded-xl ring-1 ring-white/10 bg-zinc-900 shadow-2xl z-20">
+        <div className="absolute right-0 mt-1 w-64 overflow-hidden rounded-xl ring-1 ring-white/10 bg-zinc-900 shadow-2xl z-20">
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); favMut.mutate(); setOpen(false); }}
             className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-zinc-100 hover:bg-zinc-800"
@@ -939,35 +962,27 @@ function TrackMenu({ video, collections }: { video: Video; collections: MusicCol
             {video.is_favorite ? "Remove from favorites" : "Add to favorites"}
           </button>
 
-          {/* Add to a local playlist — expands an inline list of collections. */}
+          {/* Add to / remove from local playlists — shared toggle list with
+              checkmarks + inline create (no system prompt). */}
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubOpen((s) => !s); }}
             className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm text-zinc-100 hover:bg-zinc-800"
           >
-            <ListPlus className="h-4 w-4" />
+            <ListMusic className={`h-4 w-4 ${inPlaylists > 0 ? "text-fuchsia-300" : ""}`} />
             В плейлист
+            {inPlaylists > 0 && (
+              <span className="ml-auto rounded-full bg-fuchsia-500/15 px-1.5 text-[10px] font-semibold tabular-nums text-fuchsia-300">
+                {inPlaylists}
+              </span>
+            )}
           </button>
           {subOpen && (
-            <div className="max-h-48 overflow-y-auto border-y border-white/5 bg-zinc-950/60">
-              {collections.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCollection.mutate(c.id); }}
-                  disabled={addToCollection.isPending}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 pl-9 text-left text-[13px] text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
-                >
-                  <span className="truncate">{c.name}</span>
-                  <span className="ml-auto text-[10px] tabular-nums text-zinc-500">{c.done_count}</span>
-                </button>
-              ))}
-              <button
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); createAndAdd.mutate(); }}
-                disabled={createAndAdd.isPending}
-                className="flex w-full items-center gap-2 px-3 py-1.5 pl-9 text-left text-[13px] font-medium text-fuchsia-300 hover:bg-zinc-800 disabled:opacity-50"
-              >
-                {createAndAdd.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                Создать плейлист…
-              </button>
+            <div className="border-y border-white/5 bg-zinc-950/60">
+              <AddToPlaylistList
+                videoId={video.video_id}
+                memberIds={video.collection_ids ?? []}
+                onDone={() => { setOpen(false); setSubOpen(false); }}
+              />
             </div>
           )}
 

@@ -4,7 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { Clock, AlertTriangle, Pin, PinOff, Trash2, Star, MoreVertical, ListMusic, ExternalLink, Clock3, Infinity as InfinityIcon, AlertCircle, Music, Shuffle, RefreshCw } from "lucide-react";
 import {
   videosApi, segmentsApi, settingsApi, playlistsApi, channelsApi, musicApi,
-  thumbUrl, streamUrl, type Chapter, type Video,
+  thumbUrl, streamUrl, audioUrl, type Chapter, type Video,
 } from "../lib/api";
 import {
   formatUploadDate, formatDuration, youtubeVideoUrl,
@@ -21,6 +21,9 @@ import { EndScreen } from "../components/Player/EndScreen";
 import { RelatedCard } from "../components/RelatedCard";
 import { useMiniPlayer } from "../components/MiniPlayerProvider";
 import { MusicControlBar } from "../components/MusicControlBar";
+import { AddToPlaylistButton } from "../components/AddToPlaylistButton";
+import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
+import { Headphones } from "lucide-react";
 
 export function WatchPage() {
   const { videoId } = useParams<{ videoId: string }>();
@@ -123,6 +126,10 @@ export function WatchPage() {
       qc.invalidateQueries({ queryKey: ["videos"] });
       qc.invalidateQueries({ queryKey: ["history"] });
       qc.invalidateQueries({ queryKey: ["favorites"] });
+      // Marking a manual download as music moves it out of Manual — refresh the
+      // Manual list + sidebar badge (queryKey prefix covers ["manual","count"]).
+      qc.invalidateQueries({ queryKey: ["manual"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
     },
   });
 
@@ -303,6 +310,14 @@ export function WatchPage() {
   // call flips this to false. Starting at false would briefly show a Play
   // icon for content that's already playing.
   const [playing, setPlaying] = useState(true);
+  // Which chapter the playhead is in. Updated from onTick but only when it
+  // actually changes (guarded by a ref) so we don't re-render 4×/second.
+  const [activeChapter, setActiveChapter] = useState(-1);
+  const activeChapterRef = useRef(-1);
+  // Per-device traffic-saving toggle: stream audio-only for music. Lives in
+  // localStorage (a network-dependent preference, not a server setting) and is
+  // off by default.
+  const [audioOnlyPref, setAudioOnlyPref] = useLocalStorageBool("music.audioOnly", false);
   const liveRef    = useRef<{ time: number; playing: boolean }>({ time: 0, playing: false });
   const videoRef   = useRef<Video | null>(null);
   const sourceRef  = useRef<{ playlistId: number | null; isMusicSource: boolean; isShuffled: boolean }>({
@@ -361,6 +376,17 @@ export function WatchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
 
+  // Warm the audio sidecar if the user wants audio-only but it isn't extracted
+  // yet — the endpoint kicks extraction off in the background so the next play
+  // can be audio-only. (Hook lives above the early returns.)
+  useEffect(() => {
+    if (!video) return;
+    const isMusic = !!(video.is_music || video.is_music_via_playlist);
+    if (audioOnlyPref && isMusic && video.has_audio === false) {
+      fetch(audioUrl(video.video_id)).catch(() => { /* 404 until ready — fine */ });
+    }
+  }, [audioOnlyPref, video]);
+
   if (isLoading) {
     return <div className="aspect-video animate-pulse rounded-xl bg-zinc-900" />;
   }
@@ -369,6 +395,9 @@ export function WatchPage() {
   }
 
   const isMusicVideo = video.is_music || !!video.is_music_via_playlist;
+  // Audio-only is only actually used when the sidecar exists; otherwise we fall
+  // back to the full-video stream so playback never breaks.
+  const useAudio = audioOnlyPref && isMusicVideo && !!video.has_audio;
   const playerInitialRate = isMusicVideo
     ? (settings?.music_playback_rate ?? 1)
     : (settings?.default_playback_rate ?? 1);
@@ -435,6 +464,8 @@ export function WatchPage() {
               segments={segments}
               initialRate={playerInitialRate}
               startAtSeconds={startAtSeconds}
+              mediaSrc={useAudio ? audioUrl(video.video_id) : undefined}
+              audioOnly={useAudio}
               alwaysShowControls={isMusicVideo}
               showPrevControl={isMusicVideo || isMusicSource || !!playlistId}
               onCollapseToMini={() => {
@@ -460,6 +491,20 @@ export function WatchPage() {
               onTick={(s) => {
                 liveRef.current = s;
                 if (s.playing !== playing) setPlaying(s.playing);
+
+                // Track the active chapter — last chapter whose start is at or
+                // before the playhead. Only push to state on a boundary cross.
+                const chs = video.chapters;
+                if (chs && chs.length > 1) {
+                  let idx = -1;
+                  for (let i = 0; i < chs.length; i++) {
+                    if (s.time >= chs[i].start) idx = i; else break;
+                  }
+                  if (idx !== activeChapterRef.current) {
+                    activeChapterRef.current = idx;
+                    setActiveChapter(idx);
+                  }
+                }
 
                 // Pre-fetch the next music track when we're <5 s from the
                 // end of this one. A small range request warms the HTTP
@@ -556,9 +601,44 @@ export function WatchPage() {
                           <Pin className="h-3.5 w-3.5" />
                         </span>
                       )}
+                      {(video.collection_ids?.length ?? 0) > 0 && (
+                        <span
+                          className="ml-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 px-1.5 py-0.5 text-[11px] font-medium text-fuchsia-300 align-middle"
+                          title={`В плейлистах: ${video.collection_ids!.length}`}
+                        >
+                          <ListMusic className="h-3 w-3" />
+                          {video.collection_ids!.length === 1 ? "в плейлисте" : `в ${video.collection_ids!.length} плейлистах`}
+                        </span>
+                      )}
                     </p>
                     <DeletionChip video={video} channelRetentionDays={channel?.retention_days ?? null} globals={settings} />
                   </div>
+                  {/* Audio-only toggle — traffic-saving music playback. Off by
+                   *  default, remembered per device. */}
+                  {isMusicVideo && (
+                    <button
+                      onClick={() => setAudioOnlyPref(!audioOnlyPref)}
+                      className={`rounded-full p-2 -mt-1 transition-colors ${
+                        audioOnlyPref
+                          ? "bg-fuchsia-500/15 text-fuchsia-300 hover:bg-fuchsia-500/25"
+                          : "text-zinc-400 hover:bg-zinc-800 hover:text-fuchsia-300"
+                      }`}
+                      aria-pressed={audioOnlyPref}
+                      title={audioOnlyPref
+                        ? "Только аудио включено (экономия трафика). Нажми, чтобы вернуть видео."
+                        : "Только аудио — экономия трафика для музыки"}
+                    >
+                      <Headphones className="h-6 w-6" />
+                    </button>
+                  )}
+                  {/* Add-to-playlist — only for music clips; reflects current
+                   *  membership and toggles add/remove. */}
+                  {isMusicVideo && (
+                    <AddToPlaylistButton
+                      videoId={video.video_id}
+                      memberIds={video.collection_ids ?? []}
+                    />
+                  )}
                   {/* Big star — primary fav/unfav target on music. Tucked
                    *  next to the actions menu so phone thumb can reach it. */}
                   {isMusicVideo && (
@@ -595,6 +675,7 @@ export function WatchPage() {
               {video.chapters && video.chapters.length > 1 && (
                 <ChaptersBlock
                   chapters={video.chapters}
+                  activeIndex={activeChapter}
                   onJump={(t) => {
                     playerRef.current?.seekTo(t);
                     playerRef.current?.play();
@@ -1179,32 +1260,63 @@ function MenuItem({
 }
 
 function ChaptersBlock({
-  chapters, onJump,
-}: { chapters: Chapter[]; onJump: (t: number) => void }) {
+  chapters, onJump, activeIndex = -1,
+}: { chapters: Chapter[]; onJump: (t: number) => void; activeIndex?: number }) {
   const [open, setOpen] = useState(true);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  // Keep the current chapter visible as it advances (only nudges within the
+  // chapters box, never the whole page).
+  useEffect(() => {
+    if (open && activeRef.current) {
+      activeRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex, open]);
+
+  const current = activeIndex >= 0 ? chapters[activeIndex] : null;
+
   return (
     <div className="mt-6 rounded-xl bg-zinc-900 p-4">
       <button
         onClick={() => setOpen((s) => !s)}
-        className="mb-2 flex w-full items-center justify-between text-left text-xs font-semibold uppercase tracking-wide text-zinc-400 hover:text-zinc-200"
+        className="mb-2 flex w-full items-center justify-between gap-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400 hover:text-zinc-200"
       >
-        <span>Chapters · {chapters.length}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          Chapters · {chapters.length}
+          {/* When collapsed, surface where we currently are. */}
+          {!open && current && (
+            <span className="truncate normal-case font-normal text-fuchsia-300">
+              · {current.title}
+            </span>
+          )}
+        </span>
         <span>{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div className="grid gap-1 sm:grid-cols-2">
-          {chapters.map((c, i) => (
-            <button
-              key={i}
-              onClick={() => onJump(c.start)}
-              className="flex items-start gap-3 rounded-lg p-2 text-left text-sm hover:bg-zinc-800"
-            >
-              <span className="mt-0.5 w-12 font-mono text-xs text-zinc-400 shrink-0">
-                {formatDuration(c.start)}
-              </span>
-              <span className="line-clamp-2 text-zinc-200">{c.title}</span>
-            </button>
-          ))}
+        <div className="grid max-h-80 gap-1 overflow-y-auto sm:grid-cols-2">
+          {chapters.map((c, i) => {
+            const isActive = i === activeIndex;
+            return (
+              <button
+                key={i}
+                ref={isActive ? activeRef : undefined}
+                onClick={() => onJump(c.start)}
+                aria-current={isActive ? "true" : undefined}
+                className={`flex items-start gap-3 rounded-lg p-2 text-left text-sm transition-colors ${
+                  isActive
+                    ? "bg-fuchsia-500/15 ring-1 ring-fuchsia-500/40"
+                    : "hover:bg-zinc-800"
+                }`}
+              >
+                <span className={`mt-0.5 w-12 font-mono text-xs shrink-0 ${isActive ? "text-fuchsia-300" : "text-zinc-400"}`}>
+                  {formatDuration(c.start)}
+                </span>
+                <span className={`line-clamp-2 ${isActive ? "font-medium text-white" : "text-zinc-200"}`}>
+                  {c.title}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
