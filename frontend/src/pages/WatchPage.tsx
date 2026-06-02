@@ -21,7 +21,7 @@ import { EndScreen } from "../components/Player/EndScreen";
 import { RelatedCard } from "../components/RelatedCard";
 import { useMiniPlayer } from "../components/MiniPlayerProvider";
 import { MusicControlBar } from "../components/MusicControlBar";
-import { AddToPlaylistButton } from "../components/AddToPlaylistButton";
+import { AddToPlaylistButton, PlaylistMembershipChip } from "../components/AddToPlaylistButton";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
 import { Headphones } from "lucide-react";
 
@@ -383,9 +383,16 @@ export function WatchPage() {
     if (!video) return;
     const isMusic = !!(video.is_music || video.is_music_via_playlist);
     if (audioOnlyPref && isMusic && video.has_audio === false) {
-      fetch(audioUrl(video.video_id)).catch(() => { /* 404 until ready — fine */ });
+      const vid = video.video_id;
+      // Hit the endpoint to kick extraction off, then refetch the row so
+      // has_audio flips to true and the toggle actually engages this session.
+      fetch(audioUrl(vid)).catch(() => { /* 404 until ready — fine */ });
+      const t = setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["video", vid] });
+      }, 4000);
+      return () => clearTimeout(t);
     }
-  }, [audioOnlyPref, video]);
+  }, [audioOnlyPref, video, qc]);
 
   if (isLoading) {
     return <div className="aspect-video animate-pulse rounded-xl bg-zinc-900" />;
@@ -395,6 +402,11 @@ export function WatchPage() {
   }
 
   const isMusicVideo = video.is_music || !!video.is_music_via_playlist;
+  // Playlist management is available for music clips AND any clip already in a
+  // local playlist (e.g. one that was un-marked as music but kept in a list) —
+  // so "in a playlist" always comes with a way to see which and change it.
+  const inCollection = (video.collection_ids?.length ?? 0) > 0;
+  const canManagePlaylists = isMusicVideo || inCollection;
   // Audio-only is only actually used when the sidecar exists; otherwise we fall
   // back to the full-video stream so playback never breaks.
   const useAudio = audioOnlyPref && isMusicVideo && !!video.has_audio;
@@ -601,15 +613,7 @@ export function WatchPage() {
                           <Pin className="h-3.5 w-3.5" />
                         </span>
                       )}
-                      {(video.collection_ids?.length ?? 0) > 0 && (
-                        <span
-                          className="ml-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/15 px-1.5 py-0.5 text-[11px] font-medium text-fuchsia-300 align-middle"
-                          title={`В плейлистах: ${video.collection_ids!.length}`}
-                        >
-                          <ListMusic className="h-3 w-3" />
-                          {video.collection_ids!.length === 1 ? "в плейлисте" : `в ${video.collection_ids!.length} плейлистах`}
-                        </span>
-                      )}
+                      <PlaylistMembershipChip memberIds={video.collection_ids ?? []} />
                     </p>
                     <DeletionChip video={video} channelRetentionDays={channel?.retention_days ?? null} globals={settings} />
                   </div>
@@ -631,9 +635,9 @@ export function WatchPage() {
                       <Headphones className="h-6 w-6" />
                     </button>
                   )}
-                  {/* Add-to-playlist — only for music clips; reflects current
-                   *  membership and toggles add/remove. */}
-                  {isMusicVideo && (
+                  {/* Add-to-playlist — for music clips or anything already in a
+                   *  local playlist; reflects membership and toggles add/remove. */}
+                  {canManagePlaylists && (
                     <AddToPlaylistButton
                       videoId={video.video_id}
                       memberIds={video.collection_ids ?? []}
@@ -918,8 +922,11 @@ function MusicQueuePanel({
 
   const { data: allTracks = [] } = useQuery({
     queryKey: ["music", "tracks"],
-    queryFn:  () => musicApi.tracks(500),
-    // Cache aggressively — same data feeds MusicPage and this panel.
+    // Must match MusicPage's full-library fetch (default 5000): same queryKey,
+    // so a 500-cap here would (a) miss queued ids beyond 500 — rendering "+N in
+    // queue" with zero visible rows — and (b) fight MusicPage for the shared
+    // cache entry.
+    queryFn:  () => musicApi.tracks(),
     staleTime: 60_000,
   });
 

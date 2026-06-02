@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListPlus, Plus, Check, Loader2 } from "lucide-react";
+import { ListPlus, Plus, Check, Loader2, ListMusic } from "lucide-react";
 import { musicCollectionsApi } from "../lib/api";
 
 /** The inner list — collections with a checkmark when the video is already a
@@ -116,6 +116,31 @@ export function AddToPlaylistList({
         )}
       </div>
     </div>
+  );
+}
+
+/** Names of the local playlists a video belongs to — shown on the watch page so
+ *  "in a playlist" actually says WHICH. Resolves ids → names from the cached
+ *  collections list. */
+export function PlaylistMembershipChip({ memberIds }: { memberIds: number[] }) {
+  const { data: collections = [] } = useQuery({
+    queryKey: ["music", "collections"],
+    queryFn: musicCollectionsApi.list,
+    enabled: memberIds.length > 0,
+  });
+  if (memberIds.length === 0) return null;
+  const names = memberIds
+    .map((id) => collections.find((c) => c.id === id)?.name)
+    .filter((n): n is string => !!n);
+  const label = names.length ? names.join(" · ") : `в ${memberIds.length} плейлист.`;
+  return (
+    <span
+      className="ml-2 inline-flex max-w-[16rem] items-center gap-1 truncate rounded-full bg-fuchsia-500/15 px-2 py-0.5 align-middle text-[11px] font-medium text-fuchsia-300"
+      title={names.length ? names.join(", ") : undefined}
+    >
+      <ListMusic className="h-3 w-3 flex-shrink-0" />
+      <span className="truncate">{label}</span>
+    </span>
   );
 }
 

@@ -104,6 +104,14 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   // the user was.
   const [selectedHeight, setSelectedHeight] = useState<number | null>(null);
   const qualityResumeRef = useRef<number | null>(null);
+  // Live mirrors of position + playing, read by the source-swap effect (audio
+  // toggle / quality change) to seek back and resume after the reload.
+  const currentTimeRef = useRef(0);
+  const playingRef = useRef(false);
+
+  // The actual media URL. ``mediaSrc`` (audio-only mode) wins over the
+  // full-video stream; otherwise the selected quality variant.
+  const effectiveSrc = mediaSrc ?? streamUrl(video.video_id, selectedHeight);
   // Variants list — fetched lazily for the open Quality menu, cached for
   // 30 s so polling-while-pending doesn't go wild. Status is mainly used
   // to render in-progress / failed states in the dropdown.
@@ -216,6 +224,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
 
     const onTime  = () => {
       setCurrentTime(v.currentTime);
+      currentTimeRef.current = v.currentTime;
       onTick?.({ time: v.currentTime, playing: !v.paused });
       // Throttle position save to ~5s, only while playing past 3s offset.
       const now = Date.now();
@@ -227,6 +236,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     const onDur   = () => setDuration(v.duration || 0);
     const onPlay  = () => {
       setIsPlaying(true);
+      playingRef.current = true;
       onTick?.({ time: v.currentTime, playing: true });
       if (!watchedFiredRef.current) {
         watchedFiredRef.current = true;
@@ -235,6 +245,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     };
     const onPause = () => {
       setIsPlaying(false);
+      playingRef.current = false;
       onTick?.({ time: v.currentTime, playing: false });
       // Persist whatever the user has reached when they stop watching.
       if (v.currentTime > 1) {
@@ -404,6 +415,45 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
       v.removeEventListener("playing",        onPlayingOnce);
     };
   }, [video.video_id]);
+
+  // Source swap WITHIN the same track — audio-only toggle or quality change.
+  // Changing the <video> src pauses & rewinds the element, and the autoplay
+  // effect above only fires per video_id, so without this the player goes
+  // silent after toggling. Seek back to where we were and resume if we were
+  // playing. A genuine track change (video_id changed) is skipped — that path
+  // is owned by the autoplay/resume effects, which must NOT inherit the old
+  // track's position.
+  const prevSrcRef = useRef<string | null>(null);
+  const prevVidRef = useRef(video.video_id);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const vidChanged = prevVidRef.current !== video.video_id;
+    prevVidRef.current = video.video_id;
+    if (vidChanged || prevSrcRef.current === null) {
+      prevSrcRef.current = effectiveSrc;   // new track / first mount — nothing to carry over
+      return;
+    }
+    if (prevSrcRef.current === effectiveSrc) return;
+    prevSrcRef.current = effectiveSrc;
+
+    const wasPlaying = playingRef.current;
+    if (qualityResumeRef.current == null) {
+      qualityResumeRef.current = currentTimeRef.current || null;
+    }
+    resumeAppliedRef.current = false;
+
+    let resumed = false;
+    const resume = () => {
+      if (resumed) return;
+      resumed = true;
+      v.removeEventListener("canplay", resume);
+      if (wasPlaying) v.play().catch(() => { /* gesture may be required */ });
+    };
+    v.addEventListener("canplay", resume);
+    try { v.load(); } catch { /* ignore */ }
+    return () => v.removeEventListener("canplay", resume);
+  }, [effectiveSrc, video.video_id]);
 
   // ── Media Session API ──────────────────────────────────────────────────────
   //
@@ -1110,7 +1160,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     >
         <video
           ref={videoRef as React.RefObject<HTMLVideoElement>}
-          src={mediaSrc ?? streamUrl(video.video_id, selectedHeight)}
+          src={effectiveSrc}
           // Show the thumbnail while paused / pre-load — without this iOS
           // Safari renders a black square because autoplay is blocked.
           poster={video.thumbnail_path ? thumbUrl(video.video_id) : (video.thumbnail_url ?? undefined)}
@@ -1175,7 +1225,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
         {isMusicMode && (
           <audio
             ref={audioBackupRef}
-            src={mediaSrc ?? streamUrl(video.video_id, selectedHeight)}
+            src={effectiveSrc}
             preload="auto"
             className="hidden"
             aria-hidden

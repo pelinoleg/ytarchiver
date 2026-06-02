@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Save, Loader2, CheckCircle2, Trash2, ChevronDown, ChevronUp, Wrench, Download as DownloadIcon, Upload, ShieldCheck, RotateCcw, Clock } from "lucide-react";
-import { settingsApi, maintenanceApi, backupApi, type GlobalSettings, type ImportReport, type Quality } from "../lib/api";
+import { Save, Loader2, CheckCircle2, Trash2, ChevronDown, ChevronUp, Wrench, Download as DownloadIcon, Upload, ShieldCheck, RotateCcw, Clock, Cookie, AlertTriangle } from "lucide-react";
+import { settingsApi, maintenanceApi, backupApi, cookiesApi, type GlobalSettings, type ImportReport, type Quality } from "../lib/api";
 import { ImportReviewModal, type ImportPayload } from "../components/ImportReviewModal";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
 import { ACCENTS, getAccentId, setAccentId } from "../lib/accents";
@@ -344,6 +344,8 @@ export function SettingsPage() {
 
         <AdvancedSection form={form} update={update} />
 
+        <CookiesSection />
+
         <BackupSection />
 
         <div
@@ -594,6 +596,135 @@ function formatBackupDate(iso?: string): string {
   return d.toLocaleString(undefined, {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
   });
+}
+
+function CookiesSection() {
+  const qc = useQueryClient();
+  const [text, setText] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const { data: status } = useQuery({ queryKey: ["cookies"], queryFn: cookiesApi.status });
+
+  const save = useMutation({
+    mutationFn: () => cookiesApi.save(text),
+    onSuccess: (s) => { qc.setQueryData(["cookies"], s); setText(""); },
+  });
+  const clear = useMutation({
+    mutationFn: () => cookiesApi.clear(),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["cookies"] }); },
+  });
+  const test = useMutation({ mutationFn: () => cookiesApi.test() });
+
+  return (
+    <section className="overflow-hidden rounded-2xl bg-zinc-900">
+      <div className="border-b border-white/5 px-4 py-3 sm:px-5">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <Cookie className="h-4 w-4 text-zinc-500" />
+          YouTube cookies
+        </h2>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          Лечит ошибку «Sign in to confirm you're not a bot», которой YouTube блокирует
+          скачивание с IP сервера. Вставь сюда свой <code className="rounded bg-zinc-800 px-1">cookies.txt</code> — применится сразу, без перезапуска.
+        </p>
+      </div>
+
+      <div className="px-4 py-3 sm:px-5 space-y-3">
+        {/* Status */}
+        <div className="flex items-center gap-2 text-xs">
+          {status?.configured ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 font-medium text-emerald-300">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Cookies заданы · {status.entries} записей
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-800 px-2.5 py-1 font-medium text-zinc-400">
+              Cookies не заданы
+            </span>
+          )}
+          {status?.updated_at && (
+            <span className="text-zinc-500">обновлено {formatBackupDate(status.updated_at)}</span>
+          )}
+        </div>
+
+        {/* How-to */}
+        <button
+          type="button"
+          onClick={() => setOpen((s) => !s)}
+          className="flex items-center gap-1.5 text-xs font-medium text-zinc-300 hover:text-white"
+        >
+          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          Как получить cookies.txt
+        </button>
+        {open && (
+          <ol className="ml-1 list-decimal space-y-1.5 pl-4 text-xs leading-relaxed text-zinc-400">
+            <li>Установи расширение <span className="text-zinc-200">«Get cookies.txt LOCALLY»</span> (Chrome / Firefox).</li>
+            <li>Залогинься на <span className="text-zinc-200">youtube.com</span> в этом браузере.</li>
+            <li>Открой YouTube, нажми на иконку расширения → <span className="text-zinc-200">Export</span> (формат Netscape).</li>
+            <li>Открой скачанный файл, скопируй всё содержимое и вставь в поле ниже.</li>
+            <li className="text-zinc-500">Куки живут несколько недель — если ошибка вернётся, повтори экспорт.</li>
+          </ol>
+        )}
+
+        {/* Paste box */}
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	...	SID	..."
+          spellCheck={false}
+          className="h-28 w-full resize-y rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-200 outline-none focus:border-zinc-600"
+        />
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => save.mutate()}
+            disabled={!text.trim() || save.isPending}
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-500/90 px-4 py-1.5 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-50"
+          >
+            {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Сохранить
+          </button>
+          <button
+            type="button"
+            onClick={() => test.mutate()}
+            disabled={test.isPending || !status?.configured}
+            className="inline-flex items-center gap-2 rounded-full bg-zinc-800 px-4 py-1.5 text-sm font-medium text-zinc-100 hover:bg-zinc-700 disabled:opacity-50"
+            title={status?.configured ? "Проверить на тестовом видео" : "Сначала сохрани cookies"}
+          >
+            {test.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            Проверить
+          </button>
+          {status?.configured && (
+            <button
+              type="button"
+              onClick={() => { if (confirm("Удалить cookies?")) clear.mutate(); }}
+              disabled={clear.isPending}
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-zinc-400 hover:bg-red-500/15 hover:text-red-300 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Удалить
+            </button>
+          )}
+        </div>
+
+        {/* Results */}
+        {save.isError && <p className="text-xs text-red-400">{(save.error as Error)?.message}</p>}
+        {test.data && (
+          test.data.ok ? (
+            <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Работает{test.data.title ? ` — получено «${test.data.title}»` : ""}{!test.data.using_cookies && " (без cookies — IP пока не блокируется)"}
+            </p>
+          ) : (
+            <p className="inline-flex items-start gap-1.5 text-xs text-amber-400">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+              <span>{test.data.bot_wall ? "YouTube всё ещё требует вход — cookies неверные или истекли." : `Не удалось: ${test.data.error}`}</span>
+            </p>
+          )
+        )}
+      </div>
+    </section>
+  );
 }
 
 function BackupSection() {

@@ -551,6 +551,22 @@ export interface AutoBackupStatus {
   size_bytes?: number;
 }
 
+export interface CookiesStatus {
+  configured: boolean;
+  size_bytes: number;
+  entries: number;
+  updated_at: string | null;
+}
+
+export const cookiesApi = {
+  status: () => request<CookiesStatus>("/api/cookies"),
+  save:   (content: string) =>
+    request<CookiesStatus>("/api/cookies", { method: "PUT", body: JSON.stringify({ content }) }),
+  clear:  () => request<void>("/api/cookies", { method: "DELETE" }),
+  test:   () => request<{ ok: boolean; using_cookies: boolean; bot_wall?: boolean; title?: string | null; error?: string }>(
+    "/api/cookies/test", { method: "POST" }),
+};
+
 export interface QueueStatus {
   paused: boolean;
   pending: number;

@@ -17,6 +17,11 @@ from config import settings
 log = logging.getLogger(__name__)
 
 
+def managed_cookies_path() -> Path:
+    """UI-managed Netscape cookies.txt — persists on the data volume."""
+    return Path(settings.data_dir) / "cookies.txt"
+
+
 def yt_opts_extra() -> dict:
     """Common yt-dlp options that should apply to every YouTube call:
     cookies file (if configured), alt player_client (if configured). Merge
@@ -28,7 +33,13 @@ def yt_opts_extra() -> dict:
     YouTube throws at data-center IPs. Cookies are the gold standard.
     """
     out: dict = {}
-    if settings.cookies_file:
+    # Managed cookies written via the Settings UI live at <data_dir>/cookies.txt
+    # and take precedence over the env-configured path — so the user can paste
+    # cookies in the browser and have them apply without an env edit or restart.
+    managed = managed_cookies_path()
+    if managed.exists() and managed.is_file() and managed.stat().st_size > 0:
+        out["cookiefile"] = str(managed)
+    elif settings.cookies_file:
         # Allow env-injection of either the path literal or a value that
         # equals the host-side mount. Skip silently when the file is
         # missing so the backend still boots without it.
