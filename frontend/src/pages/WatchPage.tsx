@@ -1300,7 +1300,7 @@ function ChaptersBlock({
         <span>{open ? "−" : "+"}</span>
       </button>
       {open && (
-        <div className="grid max-h-80 gap-1 overflow-y-auto sm:grid-cols-2">
+        <div className="grid max-h-80 gap-1 overflow-y-auto p-0.5 sm:grid-cols-2">
           {chapters.map((c, i) => {
             const isActive = i === activeIndex;
             return (
@@ -1311,7 +1311,7 @@ function ChaptersBlock({
                 aria-current={isActive ? "true" : undefined}
                 className={`flex items-start gap-3 rounded-lg p-2 text-left text-sm transition-colors ${
                   isActive
-                    ? "bg-fuchsia-500/15 ring-1 ring-fuchsia-500/40"
+                    ? "bg-fuchsia-500/15 ring-1 ring-inset ring-fuchsia-500/40"
                     : "hover:bg-zinc-800"
                 }`}
               >
