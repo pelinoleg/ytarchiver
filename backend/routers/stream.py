@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from db.database import DB, get_db
 from services import audio as audio_service
@@ -88,6 +88,9 @@ def stream_audio(video_id: str, bg: BackgroundTasks, db: DB = Depends(get_db)):
     ap = row["audio_path"]
     if ap and Path(ap).exists():
         return FileResponse(str(ap), media_type="audio/mp4", headers={"Accept-Ranges": "bytes"})
+    # Not ready — kick extraction off and return a plain 404 (NOT a raised
+    # HTTPException: raising builds a fresh error response and the queued
+    # background task is dropped, so the sidecar would never get built).
     if row["file_path"]:
         bg.add_task(audio_service.extract_audio_for_video, video_id)
-    raise HTTPException(404, "Audio sidecar not ready yet")
+    return JSONResponse({"detail": "Audio sidecar not ready yet"}, status_code=404)
