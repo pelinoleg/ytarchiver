@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle, Inbox, Tv, FolderPlus, Folder, FolderOpen,
-  Pencil, Check, X, Trash2,
+  Pencil, Check, X, Trash2, DownloadCloud,
 } from "lucide-react";
+import { ImportSubscriptionsModal } from "../components/ImportSubscriptionsModal";
 import {
   channelsApi, channelFoldersApi, settingsApi,
   type Channel, type ChannelFolder, type GlobalSettings,
@@ -32,6 +33,7 @@ export function SubscriptionsPage() {
   // Filter chip selection. ``null`` = all, ``0`` = ungrouped only, ``id`` = a specific folder.
   // Kept in local state because it's pure UI; not persisted between visits.
   const [filter, setFilter] = useState<number | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const visible = channels.filter((c) => {
     if (filter === null) return true;
@@ -56,7 +58,16 @@ export function SubscriptionsPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Subscriptions</h1>
           <p className="text-sm text-zinc-400">{channels.length} {channels.length === 1 ? "channel" : "channels"}</p>
         </div>
+        <button
+          onClick={() => setImportOpen(true)}
+          className="ml-auto inline-flex flex-shrink-0 items-center gap-2 rounded-full bg-zinc-800 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-700"
+          title="Импортировать подписки из твоего YouTube-аккаунта (нужны cookies)"
+        >
+          <DownloadCloud className="h-4 w-4" />
+          <span className="hidden sm:inline">Импорт с YouTube</span>
+        </button>
       </header>
+      {importOpen && <ImportSubscriptionsModal onClose={() => setImportOpen(false)} />}
 
       {/* Folder strip + filter chips. Edit / new actions live in the same
        *  row so the user has a single mental model of "folder management". */}

@@ -13,7 +13,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from services.ytdlp_service import managed_cookies_path, yt_opts_extra, cookie_opts
+from services.ytdlp_service import (
+    managed_cookies_path, yt_opts_extra, cookie_opts, account_is_authenticated,
+)
 
 
 router = APIRouter()
@@ -104,7 +106,15 @@ def test_cookies():
                 f"https://www.youtube.com/watch?v={_TEST_VIDEO}",
                 download=False, process=False,
             )
-        return {"ok": True, "using_cookies": using_cookies, "title": (info or {}).get("title")}
+        # Also report whether the cookies authenticate the *account* (needed for
+        # importing subscriptions / playlists), not just bypass the bot wall.
+        authenticated = account_is_authenticated() if using_cookies else False
+        return {
+            "ok": True,
+            "using_cookies": using_cookies,
+            "authenticated": authenticated,
+            "title": (info or {}).get("title"),
+        }
     except Exception as e:
         msg = str(e)
         bot = "Sign in to confirm" in msg or "not a bot" in msg

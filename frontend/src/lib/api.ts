@@ -563,8 +563,21 @@ export const cookiesApi = {
   save:   (content: string) =>
     request<CookiesStatus>("/api/cookies", { method: "PUT", body: JSON.stringify({ content }) }),
   clear:  () => request<void>("/api/cookies", { method: "DELETE" }),
-  test:   () => request<{ ok: boolean; using_cookies: boolean; bot_wall?: boolean; title?: string | null; error?: string }>(
+  test:   () => request<{ ok: boolean; using_cookies: boolean; authenticated?: boolean; bot_wall?: boolean; title?: string | null; error?: string }>(
     "/api/cookies/test", { method: "POST" }),
+};
+
+export interface YtSubscription {
+  channel_id: string | null;
+  name: string;
+  url: string;
+  thumbnail_url: string | null;
+  subscriber_count: number | null;
+  already_added: boolean;
+}
+
+export const ytImportApi = {
+  subscriptions: () => request<{ count: number; subscriptions: YtSubscription[] }>("/api/yt-import/subscriptions"),
 };
 
 export interface QueueStatus {

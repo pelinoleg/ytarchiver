@@ -711,10 +711,22 @@ function CookiesSection() {
         {save.isError && <p className="text-xs text-red-400">{(save.error as Error)?.message}</p>}
         {test.data && (
           test.data.ok ? (
-            <p className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              Работает{test.data.title ? ` — получено «${test.data.title}»` : ""}{!test.data.using_cookies && " (без cookies — IP пока не блокируется)"}
-            </p>
+            <div className="space-y-1 text-xs">
+              <p className="inline-flex items-center gap-1.5 text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Работает{test.data.title ? ` — получено «${test.data.title}»` : ""}{!test.data.using_cookies && " (без cookies — IP пока не блокируется)"}
+              </p>
+              {test.data.using_cookies && (
+                test.data.authenticated ? (
+                  <p className="text-emerald-400/90">✓ Аккаунт авторизован — импорт подписок/плейлистов доступен.</p>
+                ) : (
+                  <p className="text-amber-400">
+                    ⚠ Куки подходят для скачивания, но НЕ авторизуют аккаунт — нет first-party login-куки.
+                    Для импорта подписок переэкспортируй куки в приватном окне (залогинься на youtube.com, экспортируй, закрой окно).
+                  </p>
+                )
+              )}
+            </div>
           ) : (
             <p className="inline-flex items-start gap-1.5 text-xs text-amber-400">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />

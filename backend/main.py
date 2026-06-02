@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from db.database import init_schema
-from routers import channels, videos, settings_router, stream, ws, queue, history, manual, favorites, events, stats, playlists, maintenance, music, storage, search, backup, folders, variants, previews, music_collections, cookies
+from routers import channels, videos, settings_router, stream, ws, queue, history, manual, favorites, events, stats, playlists, maintenance, music, storage, search, backup, folders, variants, previews, music_collections, cookies, yt_import
 from services.scheduler import scheduler, configure_jobs
 from services.worker import worker
 from services.db_heal import ensure_healthy_db
@@ -85,6 +85,7 @@ app.include_router(music.router, prefix="/api/music", tags=["music"])
 app.include_router(music_collections.router, prefix="/api/music/collections", tags=["music"])
 app.include_router(previews.router, prefix="/api/previews", tags=["previews"])
 app.include_router(cookies.router, prefix="/api/cookies", tags=["cookies"])
+app.include_router(yt_import.router, prefix="/api/yt-import", tags=["import"])
 app.include_router(maintenance.router, prefix="/api/maintenance", tags=["maintenance"])
 app.include_router(storage.router, prefix="/api/storage", tags=["storage"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])

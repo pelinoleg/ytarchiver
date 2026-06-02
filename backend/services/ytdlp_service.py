@@ -168,6 +168,101 @@ def fetch_video_info(video_id: str) -> dict:
     }
 
 
+class NotAuthenticated(RuntimeError):
+    """Cookies present but YouTube doesn't see a logged-in session — the export
+    is missing the first-party login cookies (LOGIN_INFO / __Secure-1PSID …)."""
+
+
+def _looks_like_login_wall(err: Exception) -> bool:
+    s = str(err).lower()
+    return ("login details are needed" in s
+            or "http error 401" in s
+            or "does the playlist exist" in s  # feed/channels when logged out
+            or "private" in s and "sign in" in s)
+
+
+def account_is_authenticated() -> bool:
+    """True when the stored cookies actually authenticate the account. Probes a
+    login-only endpoint (the subscriptions feed)."""
+    if not cookie_opts():
+        return False
+    try:
+        fetch_subscriptions(limit=1)
+        return True
+    except NotAuthenticated:
+        return False
+    except Exception:
+        # Network / other hiccup — treat as unknown but not authenticated.
+        return False
+
+
+def fetch_subscriptions(limit: int = 1000) -> list[dict]:
+    """Channels the cookie-authenticated user is subscribed to.
+
+    Requires valid login cookies — raises :class:`NotAuthenticated` when the
+    session isn't logged in. Tries the dedicated channels feed first, then
+    derives unique channels from the subscription video feed as a fallback.
+    """
+    ck = cookie_opts()
+    if not ck:
+        raise NotAuthenticated("no cookies configured")
+    opts = {
+        "quiet": True, "no_warnings": True,
+        "extract_flat": True, "skip_download": True,
+        "playlistend": limit, **ck,
+    }
+
+    def _thumb(e: dict):
+        thumbs = e.get("thumbnails") or []
+        return thumbs[-1].get("url") if thumbs else None
+
+    # 1) The subscriptions *channel* list.
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info("https://www.youtube.com/feed/channels", download=False)
+        out: list[dict] = []
+        for e in info.get("entries") or []:
+            cid = e.get("channel_id") or e.get("id")
+            url = e.get("url") or (f"https://www.youtube.com/channel/{cid}" if cid else None)
+            if not url:
+                continue
+            out.append({
+                "channel_id": cid,
+                "name": e.get("title") or e.get("channel") or "Channel",
+                "url": url,
+                "thumbnail_url": _thumb(e),
+                "subscriber_count": e.get("channel_follower_count"),
+            })
+        if out:
+            return out
+    except Exception as e:
+        if _looks_like_login_wall(e):
+            raise NotAuthenticated(str(e)) from e
+        # else fall through to the video-feed fallback
+
+    # 2) Fallback — unique uploaders from the subscription video feed.
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info("https://www.youtube.com/feed/subscriptions", download=False)
+    except Exception as e:
+        if _looks_like_login_wall(e):
+            raise NotAuthenticated(str(e)) from e
+        raise
+    seen: dict[str, dict] = {}
+    for e in info.get("entries") or []:
+        cid = e.get("channel_id")
+        if not cid or cid in seen:
+            continue
+        seen[cid] = {
+            "channel_id": cid,
+            "name": e.get("channel") or e.get("uploader") or "Channel",
+            "url": e.get("channel_url") or f"https://www.youtube.com/channel/{cid}",
+            "thumbnail_url": None,
+            "subscriber_count": None,
+        }
+    return list(seen.values())
+
+
 def normalize_channel_url(url: str) -> str:
     """Ensure the URL points to the channel's Videos tab (excludes Shorts/Live).
 
