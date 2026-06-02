@@ -248,6 +248,23 @@ COLLECTION_IDS_SQL = (
 )
 
 
+# Whitelisted sort columns for the music list (server-side sort so that order is
+# global, not just within whatever page the client loaded). The ``v.`` alias is
+# required. A stable ``v.id`` tiebreaker keeps paging consistent.
+_MUSIC_SORT_COLUMNS = {
+    "added":     "v.downloaded_at",
+    "published": "COALESCE(v.upload_timestamp, CAST(NULLIF(v.upload_date, '') AS INTEGER), 0)",
+    "title":     "v.title COLLATE NOCASE",
+    "duration":  "v.duration",
+}
+
+
+def music_order_by(sort: str, direction: str) -> str:
+    col = _MUSIC_SORT_COLUMNS.get(sort or "added", _MUSIC_SORT_COLUMNS["added"])
+    d = "ASC" if str(direction).lower() == "asc" else "DESC"
+    return f"ORDER BY {col} {d}, v.id {d}"
+
+
 _STOPWORDS = {
     "the", "and", "for", "are", "but", "not", "you", "all", "any", "with", "from",
     "this", "that", "what", "how", "why", "when", "where", "who", "your", "have",
@@ -397,10 +414,13 @@ class DB:
 
     # ── Music ────────────────────────────────────────────────────────────────────
 
-    def list_music_videos(self, *, limit: int = 500, offset: int = 0):
+    def list_music_videos(self, *, sort: str = "added", direction: str = "desc",
+                          favorites_only: bool = False, limit: int = 500, offset: int = 0):
         """Music = either v.is_music = 1, or video is in a playlist with is_music = 1.
         Both flags surface to the client so the UI can distinguish per-video
-        opt-in from inherited-from-playlist."""
+        opt-in from inherited-from-playlist. Sorted server-side so the order is
+        global across pages."""
+        fav = "AND v.is_favorite = 1 " if favorites_only else ""
         return self.conn.execute(
             f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
             f"       EXISTS ("
@@ -411,21 +431,22 @@ class DB:
             f"       {COLLECTION_IDS_SQL} "
             f"FROM videos v "
             f"LEFT JOIN channels c ON c.id = v.channel_id "
-            f"WHERE v.status = 'done' AND v.is_short = 0 "
+            f"WHERE v.status = 'done' AND v.is_short = 0 {fav}"
             f"  AND {IS_MUSIC_SQL} "
-            f"ORDER BY v.downloaded_at DESC LIMIT ? OFFSET ?",
+            f"{music_order_by(sort, direction)} LIMIT ? OFFSET ?",
             (limit, offset),
         ).fetchall()
 
-    def list_music_video_ids(self):
-        """Just the video_ids, used to build the shuffle queue without
-        sending the full payload twice."""
+    def list_music_video_ids(self, *, sort: str = "added", direction: str = "desc"):
+        """The COMPLETE ordered list of music video_ids (no limit) — powers
+        global Play-all / Shuffle so they cover the whole library, not just the
+        page the client has loaded. In the same sort order as list_music_videos."""
         return [
             r["video_id"] for r in self.conn.execute(
                 f"SELECT v.video_id FROM videos v "
                 f"WHERE v.status = 'done' AND v.is_short = 0 "
                 f"  AND {IS_MUSIC_SQL} "
-                f"ORDER BY v.downloaded_at DESC"
+                f"{music_order_by(sort, direction)}"
             ).fetchall()
         ]
 

@@ -15,12 +15,13 @@ import { setMusicQueue, shuffleArray } from "../lib/queue";
  *  Music is instant. */
 export function MusicFavoritesPage() {
   const nav = useNavigate();
-  const { data: tracks = [], isLoading } = useQuery({
-    queryKey: ["music", "tracks"],
-    queryFn:  () => musicApi.tracks(500),
+  const { data: favorites = [], isLoading } = useQuery({
+    queryKey: ["music", "favorites"],
+    // Server-filtered to music favorites — no client cap, so all liked tracks
+    // show even past the old 500 limit.
+    queryFn:  () => musicApi.tracks({ favorites: true }),
     staleTime: 60_000,
   });
-  const favorites = tracks.filter((t) => t.is_favorite);
 
   function playAll(shuffled: boolean) {
     if (favorites.length === 0) return;

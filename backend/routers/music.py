@@ -16,18 +16,24 @@ router = APIRouter()
 
 @router.get("/tracks", response_model=list[VideoOut])
 def list_tracks(
-    limit: int = 5000, offset: int = 0, db: DB = Depends(get_db),
+    sort: str = "added", dir: str = "desc", favorites: bool = False,
+    limit: int = 10000, offset: int = 0, db: DB = Depends(get_db),
 ):
-    """Frontend virtualizes the grid (only renders visible rows), so a single
-    large batch is cheaper than paginating + reassembling the queue."""
-    return [VideoOut.from_row(r) for r in db.list_music_videos(limit=limit, offset=offset)]
+    """Music tracks, sorted server-side (global order) and paginatable via
+    limit/offset. The grid virtualizes rendering, so a large batch is cheap."""
+    return [
+        VideoOut.from_row(r)
+        for r in db.list_music_videos(sort=sort, direction=dir,
+                                      favorites_only=favorites, limit=limit, offset=offset)
+    ]
 
 
 @router.get("/track-ids")
-def list_track_ids(db: DB = Depends(get_db)):
-    """Just the ordered video_ids — used by the frontend to build the
-    shuffle queue without re-fetching every full row."""
-    return {"video_ids": db.list_music_video_ids()}
+def list_track_ids(sort: str = "added", dir: str = "desc", db: DB = Depends(get_db)):
+    """The COMPLETE ordered video_id list (no limit) in the requested sort —
+    powers global Play-all / Shuffle so they cover the whole library, not just
+    the page the client loaded."""
+    return {"video_ids": db.list_music_video_ids(sort=sort, direction=dir)}
 
 
 @router.get("/playlists", response_model=list[PlaylistOut])

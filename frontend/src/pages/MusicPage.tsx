@@ -36,32 +36,34 @@ const SORT_FIELDS: { key: SortField; label: string }[] = [
   { key: "duration",  label: "Длительность" },
 ];
 
-/** Ascending comparator per field; direction is applied by the caller. */
-function compareBy(field: SortField, a: Video, b: Video): number {
-  switch (field) {
-    case "added":     return (a.downloaded_at ?? "").localeCompare(b.downloaded_at ?? "");
-    case "published": {
-      const pa = a.upload_timestamp ?? (a.upload_date ? Number(a.upload_date) : 0);
-      const pb = b.upload_timestamp ?? (b.upload_date ? Number(b.upload_date) : 0);
-      return Number(pa) - Number(pb);
-    }
-    case "title":     return a.title.localeCompare(b.title);
-    case "duration":  return (a.duration ?? 0) - (b.duration ?? 0);
-  }
-}
-
-function sortTracks(tracks: Video[], field: SortField, dir: SortDir): Video[] {
-  const sign = dir === "asc" ? 1 : -1;
-  return [...tracks].sort((a, b) => sign * compareBy(field, a, b));
-}
-
 export function MusicPage() {
+  // Sort field + direction persist per device (localStorage). Default: newest
+  // added first. Sorting is server-side, so it's global across the library.
+  const [sortField, setSortField] = useState<SortField>(
+    () => ((typeof localStorage !== "undefined" && localStorage.getItem("music.sortField")) as SortField) || "added",
+  );
+  const [sortDir, setSortDir] = useState<SortDir>(
+    () => ((typeof localStorage !== "undefined" && localStorage.getItem("music.sortDir")) as SortDir) || "desc",
+  );
+  useEffect(() => { localStorage.setItem("music.sortField", sortField); }, [sortField]);
+  useEffect(() => { localStorage.setItem("music.sortDir", sortDir); }, [sortDir]);
+
+  // Display rows — server-sorted, keyed by sort so changing it refetches in the
+  // right global order.
   const { data: tracks = [], isLoading: tracksLoading } = useQuery({
-    queryKey: ["music", "tracks"],
-    // Pull the whole library (default cap 5000) — virtualization keeps the DOM
-    // flat, and the old hardcoded 500 silently truncated big libraries.
-    queryFn:  () => musicApi.tracks(),
+    queryKey: ["music", "tracks", sortField, sortDir],
+    queryFn:  () => musicApi.tracks({ sort: sortField, dir: sortDir }),
   });
+  // The COMPLETE ordered id list (lightweight) — powers global Play-all /
+  // Shuffle / click-to-play so the queue is the whole library, not just the
+  // loaded rows. Same sort as the display.
+  const { data: orderedIdsData } = useQuery({
+    queryKey: ["music", "track-ids", sortField, sortDir],
+    queryFn:  () => musicApi.trackIds(sortField, sortDir),
+  });
+  const orderedIds = orderedIdsData?.video_ids ?? [];
+  const { data: stats } = useQuery({ queryKey: ["music", "stats"], queryFn: musicApi.stats });
+
   const { data: playlists = [], isLoading: playlistsLoading } = useQuery({
     queryKey: ["music", "playlists"],
     queryFn:  musicApi.playlists,
@@ -71,24 +73,13 @@ export function MusicPage() {
     queryFn:  musicCollectionsApi.list,
   });
 
-  // Sort field + direction persist per device (localStorage). Default: newest
-  // added first.
-  const [sortField, setSortField] = useState<SortField>(
-    () => ((typeof localStorage !== "undefined" && localStorage.getItem("music.sortField")) as SortField) || "added",
-  );
-  const [sortDir, setSortDir] = useState<SortDir>(
-    () => ((typeof localStorage !== "undefined" && localStorage.getItem("music.sortDir")) as SortDir) || "desc",
-  );
-  useEffect(() => { localStorage.setItem("music.sortField", sortField); }, [sortField]);
-  useEffect(() => { localStorage.setItem("music.sortDir", sortDir); }, [sortDir]);
-  const sortedTracks = sortTracks(tracks, sortField, sortDir);
-
   // Favorites — separate from the global Favorites page, which deliberately
   // hides music. Lives in its own section so the user has one obvious target
   // for "stuff I like and want to find quickly".
   const favorites = tracks.filter((t) => t.is_favorite);
 
   const nav = useNavigate();
+  const totalTracks = stats?.tracks ?? tracks.length;
   const isEmpty = !tracksLoading && !playlistsLoading && !collectionsLoading
     && tracks.length === 0 && playlists.length === 0 && collections.length === 0;
 
@@ -103,17 +94,23 @@ export function MusicPage() {
   ];
   const trackGridStyle = { "--card-min": `${trackCardMin}px` } as CSSProperties;
 
-  // The "all music" track-id list is what powers Play All / Shuffle All — built
-  // from the *sorted* order so the queue matches what's on screen.
-  const allIds = sortedTracks.map((t) => t.video_id);
-
-  function playAll(shuffled: boolean) {
-    if (!allIds.length) return;
-    const queue = shuffled ? shuffleArray(allIds) : allIds;
-    setMusicQueue(queue, shuffled);
-    // Surface the shuffle state in the URL so the WatchPage chip can show
-    // and toggle it (and a reload preserves the mode).
-    nav(`/watch/${queue[0]}?source=music${shuffled ? "&shuffle=1" : ""}`);
+  // Build + start a music queue from the GLOBAL ordered id list. ``startId``
+  // rotates the queue to begin there; falls back to the loaded rows if the id
+  // list hasn't arrived yet.
+  function startQueue(opts: { startId?: string; shuffled: boolean }) {
+    const base = orderedIds.length ? orderedIds : tracks.map((t) => t.video_id);
+    if (!base.length) return;
+    let queue: string[];
+    if (opts.shuffled) {
+      queue = shuffleArray(base);
+    } else if (opts.startId) {
+      const i = base.indexOf(opts.startId);
+      queue = i > 0 ? [...base.slice(i), ...base.slice(0, i)] : base;
+    } else {
+      queue = base;
+    }
+    setMusicQueue(queue, opts.shuffled);
+    nav(`/watch/${queue[0]}?source=music${opts.shuffled ? "&shuffle=1" : ""}`);
   }
 
   return (
@@ -123,11 +120,12 @@ export function MusicPage() {
           a pure gradient when there's nothing in the library yet. */}
       <MusicHero
         tracks={tracks}
+        trackCount={totalTracks}
         playlistsCount={playlists.length}
         // "Play all" honours the remembered shuffle mode; "Shuffle" forces it
-        // on and remembers that globally.
-        onPlayAll={() => playAll(getMusicShuffle())}
-        onShuffle={() => { setMusicShuffle(true); playAll(true); }}
+        // on and remembers that globally. Both run over the GLOBAL ordered ids.
+        onPlayAll={() => startQueue({ shuffled: getMusicShuffle() })}
+        onShuffle={() => { setMusicShuffle(true); startQueue({ shuffled: true }); }}
       />
 
       {isEmpty ? (
@@ -159,29 +157,25 @@ export function MusicPage() {
           {tracks.length > 0 && (
             <section>
               <div className="mb-4 flex items-center justify-between gap-3">
-                <SectionHeader icon={Music} title="Tracks" count={tracks.length} noMargin />
+                <SectionHeader icon={Music} title="Tracks" count={totalTracks} noMargin />
                 <SortMenu
                   field={sortField} dir={sortDir}
                   onField={setSortField} onDir={setSortDir}
                 />
               </div>
-              {sortedTracks.length > VIRTUALIZE_THRESHOLD ? (
+              {tracks.length > VIRTUALIZE_THRESHOLD ? (
                 <VirtualVideoGrid
                   // Key on the sort so the virtualizer rebuilds rows on re-sort.
                   key={`${sortField}-${sortDir}`}
-                  items={sortedTracks}
+                  items={tracks}
                   breakpoints={trackBreakpoints}
                   minCardWidth={trackCardMin}
                   textBelow={78}
                   rowPad={16}
-                  renderItem={(t, idx) => (
+                  renderItem={(t) => (
                     <MusicTrackCard
                       track={t}
-                      onPlay={() => {
-                        const ordered = [...allIds.slice(idx), ...allIds.slice(0, idx)];
-                        setMusicQueue(ordered, false);
-                        nav(`/watch/${t.video_id}?source=music`);
-                      }}
+                      onPlay={() => startQueue({ startId: t.video_id, shuffled: false })}
                     />
                   )}
                 />
@@ -190,15 +184,11 @@ export function MusicPage() {
                   style={trackGridStyle}
                   className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]"
                 >
-                  {sortedTracks.map((t, idx) => (
+                  {tracks.map((t) => (
                     <MusicTrackCard
                       key={t.id}
                       track={t}
-                      onPlay={() => {
-                        const ordered = [...allIds.slice(idx), ...allIds.slice(0, idx)];
-                        setMusicQueue(ordered, false);
-                        nav(`/watch/${t.video_id}?source=music`);
-                      }}
+                      onPlay={() => startQueue({ startId: t.video_id, shuffled: false })}
                     />
                   ))}
                 </div>
@@ -541,9 +531,10 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
 // Hero — visual + CTAs at the top of the page.
 
 function MusicHero({
-  tracks, playlistsCount, onPlayAll, onShuffle,
+  tracks, trackCount, playlistsCount, onPlayAll, onShuffle,
 }: {
   tracks: Video[];
+  trackCount: number;
   playlistsCount: number;
   onPlayAll: () => void;
   onShuffle: () => void;
@@ -593,7 +584,7 @@ function MusicHero({
               Музыка
             </h1>
             <p className="mt-0.5 truncate text-xs text-zinc-300/90">
-              <span className="font-semibold tabular-nums text-white">{tracks.length}</span> tracks
+              <span className="font-semibold tabular-nums text-white">{trackCount}</span> tracks
               {" · "}
               <span className="font-semibold tabular-nums text-white">{playlistsCount}</span> {playlistsCount === 1 ? "playlist" : "playlists"}
               {totalBytes > 0 && <> {" · "}<span className="font-semibold tabular-nums text-white">{formatBytes(totalBytes)}</span></>}

@@ -410,11 +410,24 @@ export interface MusicStorage {
   largest: Video[];
 }
 
+export type MusicSort = "added" | "published" | "title" | "duration";
+
 export const musicApi = {
-  // Default high — virtualization in the UI keeps the DOM cost flat, so we
-  // can pull a big batch up front instead of paginating.
-  tracks:    (limit = 5000) => request<Video[]>(`/api/music/tracks?limit=${limit}`),
-  trackIds:  () => request<{ video_ids: string[] }>(`/api/music/track-ids`),
+  // Server-side sort so the order is global. Virtualization keeps DOM flat, so
+  // we pull a large batch for display; the queue uses trackIds (below).
+  tracks: (opts: { sort?: MusicSort; dir?: "asc" | "desc"; favorites?: boolean; limit?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (opts.sort) q.set("sort", opts.sort);
+    if (opts.dir)  q.set("dir", opts.dir);
+    if (opts.favorites) q.set("favorites", "1");
+    q.set("limit", String(opts.limit ?? 10000));
+    if (opts.offset) q.set("offset", String(opts.offset));
+    return request<Video[]>(`/api/music/tracks?${q.toString()}`);
+  },
+  // The COMPLETE ordered id list — drives global Play-all / Shuffle regardless
+  // of how many full rows the grid has loaded.
+  trackIds:  (sort: MusicSort = "added", dir: "asc" | "desc" = "desc") =>
+    request<{ video_ids: string[] }>(`/api/music/track-ids?sort=${sort}&dir=${dir}`),
   playlists: () => request<Playlist[]>(`/api/music/playlists`),
   stats:     () => request<MusicStats>(`/api/music/stats`),
   storage:   () => request<MusicStorage>(`/api/music/storage`),
