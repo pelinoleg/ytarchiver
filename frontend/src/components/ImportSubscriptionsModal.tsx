@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  X, Loader2, Check, Tv, AlertTriangle, Download, CheckCircle2,
+  X, Loader2, Check, Tv, AlertTriangle, Download, CheckCircle2, ExternalLink,
 } from "lucide-react";
 import {
   ytImportApi, channelsApi,
@@ -238,6 +238,18 @@ function SubRow({
           {state === "error" && <span className="ml-1 text-red-400">· ошибка</span>}
         </p>
       </div>
+      {/* Open the channel on YouTube — doesn't affect selection. */}
+      <a
+        href={sub.url}
+        target="_blank"
+        rel="noreferrer noopener"
+        onClick={(e) => e.stopPropagation()}
+        title="Открыть канал на YouTube"
+        aria-label="Открыть канал на YouTube"
+        className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+      >
+        <ExternalLink className="h-4 w-4" />
+      </a>
       {/* Per-row quality + policy, only when selected and not already added. */}
       {checked && !added && (
         <div className="flex flex-shrink-0 items-center gap-1">
