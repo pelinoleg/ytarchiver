@@ -675,11 +675,9 @@ function CookiesSection() {
               <ol className="ml-1 list-decimal space-y-1 pl-4">
                 <li>Залогинься на <span className="text-zinc-200">youtube.com</span> в браузере (виден аватар справа вверху).</li>
                 <li>Установи yt-dlp: <code className="rounded bg-zinc-800 px-1">brew install yt-dlp</code> (или <code className="rounded bg-zinc-800 px-1">pipx install yt-dlp</code>).</li>
-                <li>Вытащи куки прямо из браузера (вместо <code className="rounded bg-zinc-800 px-1">chrome</code> — <code className="rounded bg-zinc-800 px-1">firefox</code>/<code className="rounded bg-zinc-800 px-1">brave</code>/<code className="rounded bg-zinc-800 px-1">edge</code>):
-                  <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-950 p-2 text-[11px] text-zinc-300">yt-dlp --cookies-from-browser chrome \
-  --cookies cookies.txt --skip-download \
-  "https://youtu.be/dQw4w9WgXcQ"</pre>
-                  <span className="text-zinc-500">macOS спросит доступ к Keychain — разреши.</span>
+                <li>Вытащи куки прямо из браузера одной строкой (вместо <code className="rounded bg-zinc-800 px-1">chrome</code> — <code className="rounded bg-zinc-800 px-1">firefox</code>/<code className="rounded bg-zinc-800 px-1">brave</code>/<code className="rounded bg-zinc-800 px-1">edge</code>):
+                  <pre className="mt-1 overflow-x-auto whitespace-pre rounded-lg bg-zinc-950 p-2 text-[11px] text-zinc-300">yt-dlp --cookies-from-browser chrome --cookies cookies.txt --skip-download "https://youtu.be/dQw4w9WgXcQ"</pre>
+                  <span className="text-zinc-500">macOS спросит доступ к Keychain — разреши. Копируй всю строку целиком.</span>
                 </li>
                 <li>Открой <code className="rounded bg-zinc-800 px-1">cookies.txt</code>, скопируй всё и вставь ниже.</li>
               </ol>
