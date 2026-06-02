@@ -214,7 +214,14 @@ def fetch_subscriptions(limit: int = 1000) -> list[dict]:
 
     def _thumb(e: dict):
         thumbs = e.get("thumbnails") or []
-        return thumbs[-1].get("url") if thumbs else None
+        if not thumbs:
+            return None
+        u = thumbs[-1].get("url")
+        # YouTube returns protocol-relative avatar URLs (//yt3.ggpht…). Over an
+        # http:// served app those resolve to http and fail to load — pin https.
+        if u and u.startswith("//"):
+            u = "https:" + u
+        return u
 
     # 1) The subscriptions *channel* list.
     try:

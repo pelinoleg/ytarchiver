@@ -669,13 +669,30 @@ function CookiesSection() {
           Как получить cookies.txt
         </button>
         {open && (
-          <ol className="ml-1 list-decimal space-y-1.5 pl-4 text-xs leading-relaxed text-zinc-400">
-            <li>Установи расширение <span className="text-zinc-200">«Get cookies.txt LOCALLY»</span> (Chrome / Firefox).</li>
-            <li>Залогинься на <span className="text-zinc-200">youtube.com</span> в этом браузере.</li>
-            <li>Открой YouTube, нажми на иконку расширения → <span className="text-zinc-200">Export</span> (формат Netscape).</li>
-            <li>Открой скачанный файл, скопируй всё содержимое и вставь в поле ниже.</li>
-            <li className="text-zinc-500">Куки живут несколько недель — если ошибка вернётся, повтори экспорт.</li>
-          </ol>
+          <div className="space-y-3 text-xs leading-relaxed text-zinc-400">
+            <div>
+              <p className="mb-1 font-medium text-emerald-300/90">Способ 1 — yt-dlp (надёжный, нужен для импорта подписок)</p>
+              <ol className="ml-1 list-decimal space-y-1 pl-4">
+                <li>Залогинься на <span className="text-zinc-200">youtube.com</span> в браузере (виден аватар справа вверху).</li>
+                <li>Установи yt-dlp: <code className="rounded bg-zinc-800 px-1">brew install yt-dlp</code> (или <code className="rounded bg-zinc-800 px-1">pipx install yt-dlp</code>).</li>
+                <li>Вытащи куки прямо из браузера (вместо <code className="rounded bg-zinc-800 px-1">chrome</code> — <code className="rounded bg-zinc-800 px-1">firefox</code>/<code className="rounded bg-zinc-800 px-1">brave</code>/<code className="rounded bg-zinc-800 px-1">edge</code>):
+                  <pre className="mt-1 overflow-x-auto rounded-lg bg-zinc-950 p-2 text-[11px] text-zinc-300">yt-dlp --cookies-from-browser chrome \
+  --cookies cookies.txt --skip-download \
+  "https://youtu.be/dQw4w9WgXcQ"</pre>
+                  <span className="text-zinc-500">macOS спросит доступ к Keychain — разреши.</span>
+                </li>
+                <li>Открой <code className="rounded bg-zinc-800 px-1">cookies.txt</code>, скопируй всё и вставь ниже.</li>
+              </ol>
+            </div>
+            <div>
+              <p className="mb-1 font-medium text-zinc-300">Способ 2 — расширение (проще, но только для скачивания)</p>
+              <p className="ml-1 text-zinc-500">
+                «Get cookies.txt LOCALLY» → экспорт с вкладки youtube.com. Часто отдаёт неполный набор
+                (без <code className="text-zinc-400">LOGIN_INFO</code>) — тогда скачивание работает, а импорт подписок нет.
+              </p>
+            </div>
+            <p className="text-zinc-500">Куки живут несколько недель — если перестанет работать, повтори.</p>
+          </div>
         )}
 
         {/* Paste box */}
