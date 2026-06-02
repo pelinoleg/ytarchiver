@@ -300,10 +300,10 @@ function CollectionCard({ collection: c }: { collection: MusicCollection }) {
       <PlaylistStack accent="bg-fuchsia-500/35" accentSoft="bg-fuchsia-500/15">
         <Link
           to={`/music/collection/${c.id}`}
-          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:ring-1 group-hover:ring-fuchsia-500/40 group-hover:shadow-lg group-hover:shadow-fuchsia-900/30"
+          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-fuchsia-400/50 group-hover:shadow-xl group-hover:shadow-fuchsia-900/40"
         >
           {c.covers.length > 0 ? (
-            <div className="grid h-full w-full grid-cols-2 grid-rows-2">
+            <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-zinc-950">
               {c.covers.map((cov) => (
                 <img
                   key={cov.video_id}
@@ -324,12 +324,14 @@ function CollectionCard({ collection: c }: { collection: MusicCollection }) {
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/65 to-transparent" />
-          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-fuchsia-500/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fuchsia-950 shadow">
+          {/* Top sheen + bottom scrim for depth + chip legibility. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent opacity-60" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow ring-1 ring-white/20 backdrop-blur-sm">
             <ListMusic className="h-3 w-3" />
             Local
           </span>
-          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
             {c.done_count}
           </span>
         </Link>
@@ -387,12 +389,16 @@ function NewCollectionCard() {
   });
 
   return (
-    <div className="min-w-0">
-      <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40">
+    <div className="group min-w-0 pt-2.5">
+      <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-fuchsia-700/20 via-purple-900/15 to-zinc-900 ring-1 ring-inset ring-white/10 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-fuchsia-400/40 group-hover:shadow-xl group-hover:shadow-fuchsia-900/30">
+        {/* Dashed inner frame for the "add" affordance, hidden while editing. */}
+        {!editing && (
+          <div className="pointer-events-none absolute inset-2 rounded-lg border border-dashed border-white/15 transition-colors group-hover:border-fuchsia-400/40" />
+        )}
         {editing ? (
           <form
             onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate(); }}
-            className="flex w-full items-center gap-1.5 px-2"
+            className="flex w-full items-center gap-1.5 px-3"
           >
             <input
               autoFocus
@@ -400,7 +406,7 @@ function NewCollectionCard() {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => { if (!name.trim()) setEditing(false); }}
               placeholder="Название…"
-              className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm outline-none focus:border-fuchsia-500"
+              className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950/80 px-2.5 py-1.5 text-sm outline-none focus:border-fuchsia-500"
             />
             <button
               type="submit"
@@ -414,9 +420,11 @@ function NewCollectionCard() {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-zinc-500 transition-colors hover:text-fuchsia-300"
+            className="flex h-full w-full flex-col items-center justify-center gap-2 text-zinc-400 transition-colors hover:text-fuchsia-200"
           >
-            <Plus className="h-7 w-7" />
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-fuchsia-500/15 text-fuchsia-200 ring-1 ring-fuchsia-400/30 transition-all duration-300 group-hover:scale-105 group-hover:bg-fuchsia-500/25">
+              <Plus className="h-5 w-5" />
+            </span>
             <span className="text-xs font-medium">Новый плейлист</span>
           </button>
         )}
@@ -453,11 +461,11 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
         <button
           type="button"
           onClick={() => play(getMusicShuffle())}
-          className="relative block aspect-video w-full overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 text-left transition-all duration-300 group-hover:ring-1 group-hover:ring-yellow-400/50 group-hover:shadow-lg group-hover:shadow-yellow-900/30"
+          className="relative block aspect-video w-full overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 text-left transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-yellow-400/50 group-hover:shadow-xl group-hover:shadow-yellow-900/40"
           aria-label="Play favorites"
         >
           {covers.length > 0 ? (
-            <div className="grid h-full w-full grid-cols-2 grid-rows-2">
+            <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-zinc-950">
               {covers.map((t, i) => (
                 <img
                   key={t.id}
@@ -481,15 +489,16 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/65 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent opacity-60" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
           {/* Top-left FAVORITES pill — strong identity, matches other cards. */}
-          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-yellow-400/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-950 shadow">
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-yellow-400/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-950 shadow ring-1 ring-white/25 backdrop-blur-sm">
             <Star className="h-3 w-3 fill-current" />
-            Favorites
+            Liked
           </span>
 
-          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
             {tracks.length}
           </span>
         </button>
@@ -683,7 +692,7 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
       <PlaylistStack accent="bg-fuchsia-500/35" accentSoft="bg-fuchsia-500/15">
         <Link
           to={`/playlist/${p.id}`}
-          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:ring-1 group-hover:ring-fuchsia-500/40 group-hover:shadow-lg group-hover:shadow-fuchsia-900/30"
+          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-fuchsia-400/50 group-hover:shadow-xl group-hover:shadow-fuchsia-900/40"
         >
           {p.thumbnail_url ? (
             <img
@@ -699,11 +708,12 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
             </div>
           )}
 
-          {/* Bottom gradient for chip legibility. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/65 to-transparent" />
+          {/* Top sheen + bottom scrim for depth + chip legibility. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent opacity-60" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
           {/* Top-left: explicit MUSIC pill so the card identity is obvious. */}
-          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-fuchsia-500/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fuchsia-950 shadow">
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow ring-1 ring-white/20 backdrop-blur-sm">
             {search ? <Search className="h-3 w-3" /> : <Music className="h-3 w-3" />}
             {search ? "Search" : "Music"}
           </span>
@@ -712,14 +722,14 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
           {p.keep_videos_forever && (
             <span
               title="Videos in this playlist are never auto-deleted"
-              className="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded-full bg-amber-400/95 text-amber-950 shadow"
+              className="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded-full bg-amber-400/95 text-amber-950 shadow ring-1 ring-white/25"
             >
               <InfinityIcon className="h-3 w-3" strokeWidth={3} />
             </span>
           )}
 
           {/* Bottom-left count badge. */}
-          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
             {isComplete ? `${total}` : `${done}/${total}`}
           </span>
 
