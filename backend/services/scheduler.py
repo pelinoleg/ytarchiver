@@ -120,11 +120,14 @@ def configure_jobs() -> None:
         max_instances=1,
         coalesce=True,
     )
-    # Seek-based previews build in seconds, so we can clear a backlog faster:
-    # a bigger batch, more often. max_instances=1 still prevents pile-up.
+    # Seek-based previews build in seconds. Keep the batch modest so the ffmpeg
+    # bursts don't cook a thermally-constrained Pi (a bigger batch once pushed it
+    # to the 80°C soft-throttle). 6 every 12 min ≈ 30/hour — plenty to keep up
+    # with new downloads; a one-off backlog just takes a few hours, or hit
+    # "Generate now" on the Previews page.
     scheduler.add_job(
-        lambda: preview_service.backfill_missing_previews(12),
-        trigger=IntervalTrigger(minutes=7, jitter=60),
+        lambda: preview_service.backfill_missing_previews(6),
+        trigger=IntervalTrigger(minutes=12, jitter=120),
         id="preview-backfill",
         replace_existing=True,
         max_instances=1,
