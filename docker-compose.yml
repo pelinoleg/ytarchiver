@@ -67,16 +67,17 @@ services:
       SPONSORBLOCK_REFRESH_DAYS:    7
 
       # ── YouTube bot-detection bypass ──
-      # Drop a Netscape-format cookies.txt at ``./cookies/youtube.txt`` on
-      # the host (mounted read-only into /cookies) to make yt-dlp use your
-      # browser session — the most reliable cure for "Sign in to confirm
-      # you're not a bot" errors. If the file is missing the backend just
-      # runs without cookies (default behavior).
+      # PRIMARY fix: the bgutil Proof-of-Origin token provider below. With it
+      # set, yt-dlp mints POT tokens to pass "Sign in to confirm you're not a
+      # bot" on a server IP WITHOUT cookies (no expiry, no browser needed).
+      POT_PROVIDER_URL: "http://bgutil-provider:4416"
+
+      # Optional fallback: a Netscape cookies.txt at ``./cookies/youtube.txt``
+      # (mounted read-only). Only used if an anonymous attempt still hits the
+      # bot wall. With the POT provider running you usually don't need it.
       COOKIES_FILE: /cookies/youtube.txt
 
       # Force a specific yt-dlp player client. Empty = let yt-dlp pick.
-      # Try "android" if you keep hitting bot walls — it talks to a
-      # different YT endpoint that's sometimes more lenient than ``web``.
       YOUTUBE_PLAYER_CLIENT: ""
 
       # ── CORS ──
@@ -102,3 +103,32 @@ services:
     # Change the LEFT side if 8080 is already taken on your host.
     ports:
       - "8080:80"
+
+  # Proof-of-Origin token provider. The backend's yt-dlp plugin talks to this
+  # over the compose network (http://bgutil-provider:4416) to pass YouTube's
+  # bot wall without cookies. No published port — internal only.
+  bgutil-provider:
+    image: brainicism/bgutil-ytdlp-pot-provider:latest
+    container_name: bgutil-provider
+    restart: unless-stopped
+    # Watchtower (below) auto-updates ONLY this image — YouTube occasionally
+    # changes its anti-bot logic and the provider ships a fix.
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+
+  # Auto-updates the bgutil provider daily so the bot-wall bypass keeps working
+  # untouched. Scoped via WATCHTOWER_LABEL_ENABLE — it only touches containers
+  # carrying the label above (NOT the app images, which deploy via CI).
+  # ``containrrr/watchtower`` is unmaintained and breaks on modern Docker APIs;
+  # use the maintained ``nickfedor`` fork.
+  watchtower:
+    image: nickfedor/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_POLL_INTERVAL: "86400"
+      DOCKER_API_VERSION: "1.44"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
