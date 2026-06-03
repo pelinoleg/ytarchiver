@@ -3,8 +3,10 @@ FROM python:3.12-slim
 # ffmpeg is mandatory for yt-dlp post-processing (mp4 remux, audio extract,
 # preview / thumbnail conversion). curl is kept tiny and used by the
 # healthcheck so we don't need to push httpx into the image just for that.
+# smartmontools reads the media disk's SMART temperature for the dashboard
+# (only does anything when DISK_DEVICE + the device passthrough are set).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl sqlite3 \
+ && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl sqlite3 smartmontools \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

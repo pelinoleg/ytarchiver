@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends
 from config import settings as env_settings
 from db.database import DB, get_db
 from models import VideoOut
+from services import sensors
 
 
 router = APIRouter()
@@ -17,6 +18,13 @@ router = APIRouter()
 @router.get("/summary")
 def summary(db: DB = Depends(get_db)):
     return db.storage_summary()
+
+
+@router.get("/sensors")
+def sensors_reading():
+    """CPU + disk temperature (°C) for the dashboard header. Either may be
+    ``null`` when unavailable — the UI just hides the missing chip."""
+    return sensors.read_sensors()
 
 
 @router.get("/largest-videos", response_model=list[VideoOut])

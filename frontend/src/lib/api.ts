@@ -363,8 +363,11 @@ export interface StorageCleanupStats {
   by_type: { type: string; n: number }[];
 }
 
+export type Sensors = { cpu_temp: number | null; disk_temp: number | null };
+
 export const storageApi = {
   summary:         ()                                  => request<StorageSummary>(`/api/storage/summary`),
+  sensors:         ()                                  => request<Sensors>(`/api/storage/sensors`),
   largestVideos:   (limit = 30)                         => request<Video[]>(`/api/storage/largest-videos?limit=${limit}`),
   largestChannels: (limit = 15)                         => request<ChannelStorage[]>(`/api/storage/largest-channels?limit=${limit}`),
   oldWatched:      (minDays = 30, limit = 50)           => request<Video[]>(`/api/storage/old-watched?min_days=${minDays}&limit=${limit}`),

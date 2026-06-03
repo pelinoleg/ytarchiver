@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     # bot" wall on server IPs. Empty → plugin idle (no effect).
     pot_provider_url: str = ""
 
+    # Raw block device of the media disk (e.g. ``/dev/sda``) for SMART
+    # temperature on the Storage dashboard. Requires the device be passed into
+    # the container + the SYS_RAWIO capability (see docker-compose). Empty → no
+    # disk temperature shown (CPU temperature always works, no setup needed).
+    disk_device: str = ""
+
     # Worker politeness — random pause between consecutive downloads to avoid
     # hammering YouTube.
     between_downloads_min_seconds: int = 5

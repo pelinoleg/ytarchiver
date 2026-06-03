@@ -80,10 +80,23 @@ services:
       # Force a specific yt-dlp player client. Empty = let yt-dlp pick.
       YOUTUBE_PLAYER_CLIENT: ""
 
+      # ── Disk temperature on the Storage dashboard (optional) ──
+      # Set to your media disk's raw block device to show its SMART temperature
+      # in the dashboard header. Also uncomment the ``devices`` + ``cap_add``
+      # below — smartctl needs the raw device and SYS_RAWIO. Leave unset to skip
+      # it (CPU temperature always shows, no setup needed).
+      # DISK_DEVICE: /dev/sda
+
       # ── CORS ──
       # Comma-separated list of allowed origins, or ``*`` for any.
       # Tighten to ``https://your.domain`` in production.
       CORS_ORIGINS: "*"
+    # Uncomment together with DISK_DEVICE above to expose the media disk's
+    # temperature. The device path is host-specific — point it at your disk.
+    # devices:
+    #   - /dev/sda:/dev/sda
+    # cap_add:
+    #   - SYS_RAWIO
     expose:
       - "8000"
     healthcheck:
