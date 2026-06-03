@@ -103,7 +103,11 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   // src to ``/api/stream/<id>?height=N`` and seeks the player back to where
   // the user was.
   const [selectedHeight, setSelectedHeight] = useState<number | null>(null);
-  const qualityResumeRef = useRef<number | null>(null);
+  // Seconds to seek to once the (re)loaded media settles — initial resume, a
+  // quality switch, or an audio-toggle. Re-applied on several readiness events
+  // (and not cleared until we've actually landed there) so a stray v.load()
+  // reset can't clobber it — the race that used to lose watch progress.
+  const pendingResumeRef = useRef<number | null>(null);
   // Live mirrors of position + playing, read by the source-swap effect (audio
   // toggle / quality change) to seek back and resume after the reload.
   const currentTimeRef = useRef(0);
@@ -190,7 +194,6 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
 
   const watchedFiredRef = useRef(false);
   const lastPosSentRef  = useRef(0);
-  const resumeAppliedRef = useRef(false);
 
   /** User-initiated rate change: persist on the server. */
   const applyRate = useCallback((newRate: number) => {
@@ -216,7 +219,16 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
   // briefly haunt the new track's poster.
   useLayoutEffect(() => {
     setAspectRatio(initialAspect);
-  }, [video.video_id, initialAspect]);
+    // Arm the resume target for THIS video. Music always starts at 0; a ``?t=``
+    // deep link wins; otherwise the saved position. Runs before loadedmetadata
+    // (layout effect) so the seek is queued in time.
+    const isMusic = video.is_music || video.is_music_via_playlist;
+    const target = (startAtSeconds != null && startAtSeconds > 0)
+      ? startAtSeconds
+      : (isMusic ? 0 : (video.last_position_seconds ?? 0));
+    pendingResumeRef.current = target > 1 ? target : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video.video_id, initialAspect, startAtSeconds]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -225,6 +237,12 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     const onTime  = () => {
       setCurrentTime(v.currentTime);
       currentTimeRef.current = v.currentTime;
+      // Once we've actually reached the resume point, stop re-applying it so
+      // manual scrubbing back isn't fought.
+      if (pendingResumeRef.current != null && !v.seeking
+          && v.currentTime >= pendingResumeRef.current - 1) {
+        pendingResumeRef.current = null;
+      }
       onTick?.({ time: v.currentTime, playing: !v.paused });
       // Throttle position save to ~5s, only while playing past 3s offset.
       const now = Date.now();
@@ -268,30 +286,20 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
         const clamped = Math.max(0.5, Math.min(3, ar));
         setAspectRatio(clamped);
       }
-      // Resume target. Quality-switch resume beats everything else (the
-      // user is mid-watch and just bumped resolution) — it overrides the
-      // resume-applied flag too. Then ``?t=`` deep link, then last
-      // position. Music always starts at 0 unless an explicit start was
-      // requested.
-      if (qualityResumeRef.current != null) {
-        const dur = v.duration || 0;
-        const target = qualityResumeRef.current;
-        if (target > 0 && dur > 0 && target < dur - 1) {
-          v.currentTime = target;
-        }
-        qualityResumeRef.current = null;
-        return;
-      }
-      if (resumeAppliedRef.current) return;
-      const isMusic = video.is_music || video.is_music_via_playlist;
+      applyResume();
+    };
+    // Seek to the armed resume target. Safe to call on multiple readiness
+    // events — it no-ops once we're already near the target, and re-seeks if a
+    // load reset currentTime back to 0 before we landed.
+    const applyResume = () => {
+      const t = pendingResumeRef.current;
+      if (t == null) return;
       const dur = v.duration || 0;
-      const jump = startAtSeconds != null && startAtSeconds > 0
-        ? startAtSeconds
-        : (isMusic ? 0 : (video.last_position_seconds ?? 0));
-      if (jump > 1 && dur > 0 && jump < dur - 2) {
-        v.currentTime = jump;
+      if (dur <= 0) return;
+      if (t >= dur - 2) { pendingResumeRef.current = null; return; }
+      if (Math.abs(v.currentTime - t) > 1.5) {
+        try { v.currentTime = t; } catch { /* ignore */ }
       }
-      resumeAppliedRef.current = true;
     };
 
     const onEnd = () => { onEnded?.(); };
@@ -319,6 +327,8 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     v.addEventListener("ratechange",       onRate);
     v.addEventListener("progress",         onProg);
     v.addEventListener("loadedmetadata",   onLoaded);
+    v.addEventListener("loadeddata",       applyResume);
+    v.addEventListener("canplay",          applyResume);
     v.addEventListener("ended",            onEnd);
     v.addEventListener("error",            onErrorEvt);
     return () => {
@@ -329,6 +339,8 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
       v.removeEventListener("ratechange",     onRate);
       v.removeEventListener("progress",       onProg);
       v.removeEventListener("loadedmetadata", onLoaded);
+      v.removeEventListener("loadeddata",     applyResume);
+      v.removeEventListener("canplay",        applyResume);
       v.removeEventListener("ended",          onEnd);
       v.removeEventListener("error",          onErrorEvt);
     };
@@ -438,10 +450,8 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     prevSrcRef.current = effectiveSrc;
 
     const wasPlaying = playingRef.current;
-    if (qualityResumeRef.current == null) {
-      qualityResumeRef.current = currentTimeRef.current || null;
-    }
-    resumeAppliedRef.current = false;
+    // Restore the current position after the swap reload.
+    pendingResumeRef.current = currentTimeRef.current || null;
 
     let resumed = false;
     const resume = () => {
@@ -667,8 +677,9 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     reload: () => {
       const v = videoRef.current; if (!v) return;
       // Re-arm the autoplay state machine so the multi-event retry chain
-      // in the [video.video_id] effect kicks in again on the new bytes.
-      resumeAppliedRef.current = false;
+      // in the [video.video_id] effect kicks in again on the new bytes, and
+      // keep the user's current position across the reload.
+      pendingResumeRef.current = v.currentTime || null;
       watchedFiredRef.current  = false;
       try { v.load(); } catch { /* ignore */ }
       const p = v.play();
@@ -1446,8 +1457,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
             onSelect={(h) => {
               if (h === selectedHeight) return;
               const v = videoRef.current;
-              qualityResumeRef.current = v?.currentTime ?? null;
-              resumeAppliedRef.current = false;
+              pendingResumeRef.current = v?.currentTime ?? null;
               setSelectedHeight(h);
             }}
             onAddHeight={(h) => variantMut.mutate(h)}

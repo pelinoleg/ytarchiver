@@ -36,9 +36,18 @@ def check_integrity() -> dict:
         missing: list[dict] = []
         for r in rows:
             p = r["file_path"]
-            if p and Path(p).exists():
+            # Healthy = exists AND non-empty. A 0-byte file is a broken /
+            # truncated download (the container's moov atom never got written),
+            # so treat it like a missing file → re-download.
+            ok = False
+            if p:
+                try:
+                    ok = Path(p).exists() and Path(p).stat().st_size > 0
+                except OSError:
+                    ok = False
+            if ok:
                 continue
-            # File is gone — mark deleted and log.
+            # File is gone or empty — mark deleted and log.
             conn.execute(
                 "UPDATE videos SET status = 'deleted', file_path = NULL, "
                 "  thumbnail_path = NULL, subtitle_path = NULL, info_path = NULL "
@@ -47,7 +56,7 @@ def check_integrity() -> dict:
             )
             db.log_event(
                 "video_missing_on_disk",
-                message=f"file gone: {p}",
+                message=f"file gone or empty: {p}",
                 video_id=r["video_id"],
                 video_title=r["title"],
                 channel_id=r["channel_id"],

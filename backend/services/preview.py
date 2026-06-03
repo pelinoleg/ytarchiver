@@ -223,6 +223,15 @@ def build_preview_for_video(video_id: str) -> bool:
     if not src.exists():
         _record_preview_failure(video_id, "source file not found on disk")
         return False
+    try:
+        if src.stat().st_size == 0:
+            # 0-byte = broken/truncated download. Fail cleanly (no scary ffmpeg
+            # log) — the integrity sweep will re-download it.
+            _record_preview_failure(video_id, "source file is empty (broken download)")
+            return False
+    except OSError:
+        _record_preview_failure(video_id, "source file unreadable")
+        return False
     out = src.parent / PREVIEW_FILENAME
     _set_current(video_id, row["title"])
     try:
