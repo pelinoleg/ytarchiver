@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     # android client gets past bot detection that web/web_embedded can't.
     youtube_player_client: str = ""
 
+    # Base URL of the bgutil Proof-of-Origin token provider (e.g.
+    # ``http://bgutil-provider:4416``). When set, the bgutil yt-dlp plugin uses
+    # it to mint POT tokens — the cookie-free fix for the "confirm you're not a
+    # bot" wall on server IPs. Empty → plugin idle (no effect).
+    pot_provider_url: str = ""
+
     # Worker politeness — random pause between consecutive downloads to avoid
     # hammering YouTube.
     between_downloads_min_seconds: int = 5

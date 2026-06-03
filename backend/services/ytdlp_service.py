@@ -28,10 +28,14 @@ def yt_opts_extra() -> dict:
     :func:`extract_info`, which adds them only as a bot-wall fallback.
     """
     out: dict = {}
+    ea: dict = {}
     if settings.youtube_player_client:
-        out["extractor_args"] = {
-            "youtube": {"player_client": [settings.youtube_player_client]},
-        }
+        ea["youtube"] = {"player_client": [settings.youtube_player_client]}
+    if settings.pot_provider_url:
+        # Point the bgutil POT plugin at the provider container.
+        ea["youtubepot-bgutilhttp"] = {"base_url": [settings.pot_provider_url]}
+    if ea:
+        out["extractor_args"] = ea
     return out
 
 

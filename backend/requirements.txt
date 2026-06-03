@@ -3,5 +3,9 @@ uvicorn[standard]>=0.30
 pydantic>=2.6
 pydantic-settings>=2.2
 yt-dlp>=2024.5
+# Proof-of-Origin token provider plugin — auto-discovered by yt-dlp; talks to
+# the bgutil-provider container to pass YouTube's "confirm you're not a bot"
+# wall on a server IP without cookies.
+bgutil-ytdlp-pot-provider>=1.0
 apscheduler>=3.10
 httpx>=0.27
