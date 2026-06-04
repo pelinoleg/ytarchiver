@@ -7,7 +7,7 @@ via the ``IS_MUSIC_SQL`` predicate; this router is a thin pass-through.
 from fastapi import APIRouter, Depends
 
 from db.database import DB, get_db
-from models import VideoOut
+from models import VideoOut, ChannelOut
 from routers.playlists import PlaylistOut
 
 
@@ -39,6 +39,13 @@ def list_track_ids(sort: str = "added", dir: str = "desc", db: DB = Depends(get_
 @router.get("/playlists", response_model=list[PlaylistOut])
 def list_playlists(db: DB = Depends(get_db)):
     return [PlaylistOut.from_row(r) for r in db.list_music_playlists()]
+
+
+@router.get("/channels", response_model=list[ChannelOut])
+def list_channels(db: DB = Depends(get_db)):
+    """Subscribed channels flagged as music — shown as their own row on the
+    Music page. Every video they upload is treated as music."""
+    return [ChannelOut.from_row(r) for r in db.list_music_channels()]
 
 
 @router.get("/stats")

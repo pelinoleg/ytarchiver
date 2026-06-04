@@ -37,14 +37,19 @@ def subscribe_channel(
     show_on_home: bool = True,
     folder_id: int | None = None,
     latest_count: int | None = None,
+    is_music: bool = False,
 ) -> int:
     """Create a channel row from a YouTube URL. Returns the new channel id.
 
-    Idempotent: returns the existing channel id if already subscribed.
+    Idempotent: returns the existing channel id if already subscribed. A truthy
+    ``is_music`` still upgrades an already-subscribed channel to a music channel
+    (so re-adding it from the "music channel" flow marks the existing one).
     """
     normalized_url = ytdlp_service.normalize_channel_url(url)
     existing = db.get_channel_by_url(normalized_url)
     if existing:
+        if is_music and not existing["is_music"]:
+            db.update_channel_fields(existing["id"], {"is_music": True})
         return existing["id"]
 
     info = ytdlp_service.fetch_channel_info(normalized_url)
@@ -66,6 +71,7 @@ def subscribe_channel(
         folder_id=folder_id,
         latest_count=latest_count if download_policy == "latest" else None,
         download_policy=download_policy,
+        is_music=is_music,
     )
     log.info("subscribed channel %s (id=%d) policy=%s", info["name"], channel_id, download_policy)
     return channel_id

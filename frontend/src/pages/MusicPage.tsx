@@ -1,14 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Music, Play, Shuffle, ListMusic, Search, Inbox, Star,
+  Music, Play, Shuffle, ListMusic, Search, Inbox, Star, Tv,
   Infinity as InfinityIcon, MoreVertical, MinusCircle,
   Plus, Check, ArrowDownUp, ArrowUp, ArrowDown, Loader2, CheckCircle2,
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 import {
   musicApi, musicCollectionsApi, playlistsApi, videosApi, thumbUrl, previewUrl,
-  type MusicCollection, type Playlist, type Video,
+  type MusicCollection, type Playlist, type Video, type Channel,
 } from "../lib/api";
 import { AddToPlaylistList } from "../components/AddToPlaylistButton";
 import { useSelection } from "../components/SelectionProvider";
@@ -71,6 +71,10 @@ export function MusicPage() {
   const { data: collections = [], isLoading: collectionsLoading } = useQuery({
     queryKey: ["music", "collections"],
     queryFn:  musicCollectionsApi.list,
+  });
+  const { data: musicChannels = [] } = useQuery({
+    queryKey: ["music", "channels"],
+    queryFn:  musicApi.channels,
   });
 
   // Favorites — separate from the global Favorites page, which deliberately
@@ -140,14 +144,26 @@ export function MusicPage() {
                 action={<NewPlaylistButton />}
               />
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                {/* Favorites — styled like the other playlist cards so it lives
-                 *  in the same flow. Click to open Music with the favs queue. */}
+                {/* User-curated local playlists + YouTube music playlists load
+                 *  fast. The Liked card depends on the heavy tracks query, so it
+                 *  renders LAST — that way it appends at the end of the row when
+                 *  it arrives instead of being inserted at the front and shoving
+                 *  everything already on screen. */}
+                {collections.map((c) => <CollectionCard key={`c-${c.id}`} collection={c} />)}
+                {playlists.map((p) => <MusicPlaylistCard key={p.id} playlist={p} />)}
                 {favorites.length > 0 && (
                   <FavoritesPlaylistCard tracks={favorites} />
                 )}
-                {/* User-curated local playlists. */}
-                {collections.map((c) => <CollectionCard key={`c-${c.id}`} collection={c} />)}
-                {playlists.map((p) => <MusicPlaylistCard key={p.id} playlist={p} />)}
+              </div>
+            </section>
+          )}
+
+          {/* Music channels — their own row, marked as channels, not playlists. */}
+          {musicChannels.length > 0 && (
+            <section>
+              <SectionHeader icon={Tv} title="Channels" count={musicChannels.length} />
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+                {musicChannels.map((c) => <MusicChannelCard key={c.id} channel={c} />)}
               </div>
             </section>
           )}
@@ -767,6 +783,99 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
             />
           </div>
         )}
+      </PlaylistStack>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Music channel card — a subscribed channel flagged as music. Same poster as a
+// playlist but sky-accented + a "Channel" pill so it reads as a channel, not a
+// playlist. Links to the channel page; play/shuffle seeds the queue from its
+// downloaded videos (all of a music channel's videos are music).
+
+function MusicChannelCard({ channel: c }: { channel: Channel }) {
+  const nav = useNavigate();
+  const { refetch } = useQuery({
+    queryKey: ["music", "channel-videos", c.id],
+    queryFn: () => videosApi.list({ channel_id: c.id, status: "done", limit: 5000 }),
+    enabled: false,
+  });
+
+  async function play(shuffled: boolean) {
+    const res = await refetch();
+    const ids = (res.data ?? []).filter((v) => v.status === "done").map((v) => v.video_id);
+    if (!ids.length) return;
+    const ordered = shuffled ? shuffleArray(ids) : ids;
+    setMusicQueue(ordered, shuffled);
+    const params = new URLSearchParams({ source: "music" });
+    if (shuffled) params.set("shuffle", "1");
+    nav(`/watch/${ordered[0]}?${params.toString()}`);
+  }
+
+  const count = c.video_count;
+
+  return (
+    <div className="group block min-w-0">
+      <PlaylistStack accent="bg-sky-500/35" accentSoft="bg-sky-500/15">
+        <Link
+          to={`/channel/${c.id}`}
+          className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-sky-400/50 group-hover:shadow-xl group-hover:shadow-sky-900/40"
+        >
+          {c.thumbnail_url ? (
+            <img
+              src={c.thumbnail_url}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+            />
+          ) : (
+            <div className="grid h-full w-full place-items-center bg-gradient-to-br from-sky-700/30 via-blue-900/25 to-zinc-900">
+              <Tv className="h-10 w-10 text-sky-300/70" />
+            </div>
+          )}
+
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/10 to-transparent opacity-60" />
+
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-sky-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow ring-1 ring-white/20 backdrop-blur-sm">
+            <Tv className="h-3 w-3" />
+            Channel
+          </span>
+          <span className="absolute top-1.5 right-1.5 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
+            {count}
+          </span>
+        </Link>
+
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2 p-2.5 pt-10">
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]" title={c.name}>
+              {c.name}
+            </h3>
+            <p className="mt-0.5 truncate text-[11px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              {count} {count === 1 ? "track" : "tracks"}
+            </p>
+          </div>
+          {count > 0 && (
+            <div className="pointer-events-auto flex flex-shrink-0 items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+              <button
+                onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
+                aria-label="Shuffle" title="Shuffle"
+                className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900/90 text-sky-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
+              >
+                <Shuffle className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
+                aria-label="Play" title="Play"
+                className="grid h-10 w-10 place-items-center rounded-full bg-sky-500 text-white shadow-xl shadow-sky-900/50 hover:bg-sky-400 active:scale-95 transition-transform"
+              >
+                <Play className="h-5 w-5 fill-current translate-x-0.5" />
+              </button>
+            </div>
+          )}
+        </div>
       </PlaylistStack>
     </div>
   );

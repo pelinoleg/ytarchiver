@@ -25,6 +25,7 @@ export interface Channel {
   last_sync_error: string | null;
   video_count: number;
   recent_count: number;
+  is_music: boolean;
   created_at: string | null;
 }
 
@@ -163,6 +164,7 @@ export const channelsApi = {
     show_on_home?: boolean;
     folder_id?: number | null;
     latest_count?: number | null;
+    is_music?: boolean;
   }) => request<Channel>("/api/channels", { method: "POST", body: JSON.stringify(body) }),
   update: (id: number, body: {
     quality?: Quality | null;
@@ -432,6 +434,7 @@ export const musicApi = {
   trackIds:  (sort: MusicSort = "added", dir: "asc" | "desc" = "desc") =>
     request<{ video_ids: string[] }>(`/api/music/track-ids?sort=${sort}&dir=${dir}`),
   playlists: () => request<Playlist[]>(`/api/music/playlists`),
+  channels:  () => request<Channel[]>(`/api/music/channels`),
   stats:     () => request<MusicStats>(`/api/music/stats`),
   storage:   () => request<MusicStorage>(`/api/music/storage`),
 };

@@ -312,6 +312,7 @@ async function channelCard(ctx, { open }) {
   let retention = null;
   let folderId = null;
   let showOnHome = true;
+  let isMusic = false;
 
   // body parts that need to react to state
   const hint = el("p", { class: "hint", text: POLICY_OPTIONS[0].hint });
@@ -398,6 +399,11 @@ async function channelCard(ctx, { open }) {
     el("span", { class: "t", html: "Показывать на Home<small>иначе видео только на странице канала</small>" }),
   ]);
 
+  const musicLabel = el("label", { class: "check" }, [
+    el("input", { type: "checkbox", onchange: (e) => (isMusic = e.target.checked) }),
+    el("span", { class: "t", html: "Музыкальный канал<small>все видео → раздел Music, keep forever</small>" }),
+  ]);
+
   const btn = el("button", { class: "btn sub", text: "Подписаться на канал" });
   const badge = el("span", { class: "badge", style: "display:none" });
 
@@ -415,6 +421,7 @@ async function channelCard(ctx, { open }) {
       el("span", { class: "label", text: "Папка" }), folderChips,
       el("span", { class: "label", text: "Retention" }), retChips,
       homeLabel,
+      musicLabel,
     ]),
     el("div", { class: "actions" }, [btn]),
   ]);
@@ -433,6 +440,7 @@ async function channelCard(ctx, { open }) {
           show_on_home: showOnHome,
           folder_id: folderId,
           latest_count: policy === "latest" ? latestCount : null,
+          is_music: isMusic,
         },
       });
       toast("Подписка оформлена");

@@ -46,7 +46,11 @@ def cleanup_expired() -> int:
                 "UNION "
                 "SELECT pv.video_id FROM playlist_videos pv "
                 "JOIN playlists p ON p.id = pv.playlist_id "
-                "WHERE p.is_music = 1"
+                "WHERE p.is_music = 1 "
+                "UNION "
+                "SELECT v.video_id FROM videos v "
+                "JOIN channels c ON c.id = v.channel_id "
+                "WHERE c.is_music = 1"
             ).fetchall()
         }
 

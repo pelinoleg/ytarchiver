@@ -235,6 +235,13 @@ _MIGRATIONS: list[tuple[str, list[str]]] = [
         "CREATE INDEX IF NOT EXISTS idx_music_collection_videos_video "
         "  ON music_collection_videos(video_id)",
     ]),
+    ("0025_channel_is_music", [
+        # A "music channel": every video it uploads is treated as music (shows
+        # in the Music page, kept forever — same semantics as a music playlist).
+        # Folded into IS_MUSIC_SQL so the whole app sees those videos as music.
+        "ALTER TABLE channels ADD COLUMN is_music INTEGER NOT NULL DEFAULT 0",
+        "CREATE INDEX IF NOT EXISTS idx_channels_is_music ON channels(is_music)",
+    ]),
 ]
 
 
@@ -246,6 +253,9 @@ IS_MUSIC_SQL = (
     "  SELECT 1 FROM playlist_videos pv "
     "  JOIN playlists p ON p.id = pv.playlist_id "
     "  WHERE pv.video_id = v.video_id AND p.is_music = 1"
+    ") OR EXISTS ("
+    "  SELECT 1 FROM channels mc "
+    "  WHERE mc.id = v.channel_id AND mc.is_music = 1"
     "))"
 )
 NOT_MUSIC_SQL = f"NOT {IS_MUSIC_SQL}"
@@ -481,6 +491,21 @@ class DB:
             "FROM playlists p "
             "WHERE p.is_music = 1 "
             "ORDER BY p.title COLLATE NOCASE ASC"
+        ).fetchall()
+
+    def list_music_channels(self):
+        """Subscribed channels flagged as music. Every done video counts as a
+        track (all of a music channel's videos are music), so the count is a
+        plain done-count, not the NOT_MUSIC one used by the regular list."""
+        return self.conn.execute(
+            "SELECT c.*, "
+            "       (SELECT COUNT(*) FROM videos v "
+            "        WHERE v.channel_id = c.id AND v.is_short = 0 "
+            "          AND v.status = 'done') AS video_count, "
+            "       0 AS recent_count "
+            "FROM channels c "
+            "WHERE c.is_music = 1 AND c.is_subscribed = 1 "
+            "ORDER BY c.name COLLATE NOCASE ASC"
         ).fetchall()
 
     # ── Music collections (user-curated local playlists) ─────────────────────────
@@ -747,16 +772,18 @@ class DB:
         folder_id: Optional[int] = None,
         latest_count: Optional[int] = None,
         download_policy: Optional[str] = None,
+        is_music: bool = False,
     ) -> int:
         cur = self.conn.execute(
             "INSERT INTO channels "
             "(url, yt_channel_id, name, description, thumbnail_url, subscriber_count, "
             " download_from_date, quality, retention_days, sync_interval_minutes, "
-            " show_on_home, folder_id, latest_count, download_policy) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " show_on_home, folder_id, latest_count, download_policy, is_music) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (url, yt_channel_id, name, description, thumbnail_url, subscriber_count,
              download_from_date, quality, retention_days, sync_interval_minutes,
-             1 if show_on_home else 0, folder_id, latest_count, download_policy),
+             1 if show_on_home else 0, folder_id, latest_count, download_policy,
+             1 if is_music else 0),
         )
         self.conn.commit()
         return cur.lastrowid

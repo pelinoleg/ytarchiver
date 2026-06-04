@@ -22,6 +22,7 @@ class ChannelUpdate(BaseModel):
     folder_id: Optional[int] = None              # null = un-group (move to top)
     latest_count: Optional[int] = None
     download_policy: Optional[str] = None        # changing it recomputes download_from_date
+    is_music: Optional[bool] = None              # mark/unmark as a music channel
 
 
 @router.get("", response_model=list[ChannelOut])
@@ -47,6 +48,7 @@ def subscribe_channel(
             show_on_home=body.show_on_home,
             folder_id=body.folder_id,
             latest_count=body.latest_count,
+            is_music=body.is_music,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to resolve channel: {e}")

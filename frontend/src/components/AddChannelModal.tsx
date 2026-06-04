@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Music } from "lucide-react";
 import { channelsApi, channelFoldersApi, settingsApi, type DownloadPolicy, type Quality } from "../lib/api";
 import { RetentionPicker } from "./RetentionPicker";
 import { useToast } from "./ToastProvider";
@@ -24,6 +24,7 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
   const [quality, setQuality] = useState<Quality | "">("");
   const [retention, setRetention] = useState<number | null>(null);
   const [showOnHome, setShowOnHome] = useState(true);
+  const [isMusic, setIsMusic] = useState(false);
   const [folderId, setFolderId] = useState<number | null>(null);
   // Inline-create state for "+ New folder" picked from the dropdown.
   const [creatingFolder, setCreatingFolder] = useState(false);
@@ -59,6 +60,7 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
         show_on_home: showOnHome,
         folder_id: folderId,
         latest_count: policy === "latest" ? latestCount : null,
+        is_music: isMusic,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["channels"] });
@@ -260,6 +262,25 @@ export function AddChannelModal({ onClose }: { onClose: () => void }) {
               <div className="text-xs text-zinc-400">
                 Off → videos are still downloaded but only appear on this channel's page
                 (and in search). Useful for noisy channels you watch on demand.
+              </div>
+            </div>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-800 px-3 py-2 text-sm hover:border-zinc-700">
+            <input
+              type="checkbox"
+              checked={isMusic}
+              onChange={(e) => setIsMusic(e.target.checked)}
+              className="mt-0.5 accent-fuchsia-400"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 font-medium">
+                <Music className="h-4 w-4 text-fuchsia-300" />
+                Музыкальный канал
+              </div>
+              <div className="text-xs text-zinc-400">
+                Все его видео считаются музыкой — попадают в раздел Music
+                (отдельной плашкой-каналом) и не удаляются по retention.
               </div>
             </div>
           </label>

@@ -31,6 +31,7 @@ class ChannelCreate(BaseModel):
     show_on_home: bool = True
     folder_id: Optional[int] = None
     latest_count: Optional[int] = None  # only meaningful when download_policy == "latest"
+    is_music: bool = False              # music channel → all its videos are music
 
 
 class ChannelOut(BaseModel):
@@ -50,6 +51,7 @@ class ChannelOut(BaseModel):
     folder_id: Optional[int] = None
     latest_count: Optional[int] = None
     download_policy: Optional[str] = None
+    is_music: bool = False
     download_from_date: Optional[str] = None
     last_synced: Optional[str] = None
     last_sync_added_count: Optional[int] = None
