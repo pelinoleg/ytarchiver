@@ -29,8 +29,11 @@ def yt_opts_extra() -> dict:
     """
     out: dict = {}
     ea: dict = {}
-    if settings.youtube_player_client:
-        ea["youtube"] = {"player_client": [settings.youtube_player_client]}
+    # Comma-separated → list, so multi-client / exclusion forms like
+    # ``default,-android_vr`` reach yt-dlp as ["default", "-android_vr"].
+    clients = [c.strip() for c in (settings.youtube_player_client or "").split(",") if c.strip()]
+    if clients:
+        ea["youtube"] = {"player_client": clients}
     if settings.pot_provider_url:
         # Point the bgutil POT plugin at the provider container.
         ea["youtubepot-bgutilhttp"] = {"base_url": [settings.pot_provider_url]}

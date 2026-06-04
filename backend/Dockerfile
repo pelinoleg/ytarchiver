@@ -9,6 +9,14 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg ca-certificates curl sqlite3 smartmontools \
  && rm -rf /var/lib/apt/lists/*
 
+# JavaScript runtime for yt-dlp. As of late-2025 yt-dlp deprecated extraction
+# without a JS runtime: the player nsig/sig challenge AND the bgutil GVS PO
+# token both need one, or YouTube falls back to the android_vr client which is
+# login-walled ("Sign in to confirm you're not a bot"). Deno is the runtime
+# yt-dlp enables by default, so just having it on PATH is enough — no flag.
+# The bin image is multi-arch, so buildx copies the right amd64/arm64 binary.
+COPY --from=denoland/deno:bin-2.8.2 /deno /usr/local/bin/deno
+
 WORKDIR /app
 
 # Install Python deps first so the layer caches across code-only edits.

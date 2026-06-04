@@ -47,10 +47,14 @@ class Settings(BaseSettings):
     # (e.g. "Get cookies.txt LOCALLY") while logged into your YT account.
     cookies_file: str = ""
 
-    # Alternative yt-dlp player client. Empty → yt-dlp's default cascade.
-    # Common values: ``android``, ``ios``, ``web_safari``. Sometimes the
-    # android client gets past bot detection that web/web_embedded can't.
-    youtube_player_client: str = ""
+    # yt-dlp player client(s), comma-separated. Empty → yt-dlp's default cascade.
+    # Default drops ``android_vr``: in current yt-dlp it leads the cascade but is
+    # login-walled on server IPs ("Sign in to confirm you're not a bot") and
+    # aborts the whole extraction before the POT-capable web/tv clients are
+    # tried. ``default,-android_vr`` keeps the normal cascade minus that one.
+    # A JS runtime (deno, baked into the image) is required for these clients'
+    # nsig + GVS PO token to work.
+    youtube_player_client: str = "default,-android_vr"
 
     # Base URL of the bgutil Proof-of-Origin token provider (e.g.
     # ``http://bgutil-provider:4416``). When set, the bgutil yt-dlp plugin uses
