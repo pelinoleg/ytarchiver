@@ -137,11 +137,9 @@ export function MusicPage() {
               <SectionHeader
                 icon={ListMusic} title="Playlists"
                 count={playlists.length + collections.length + (favorites.length > 0 ? 1 : 0)}
+                action={<NewPlaylistButton />}
               />
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                {/* New-playlist tile first — the primary "make a collection"
-                 *  action sits at the front of the row. */}
-                <NewCollectionCard />
                 {/* Favorites — styled like the other playlist cards so it lives
                  *  in the same flow. Click to open Music with the favs queue. */}
                 {favorites.length > 0 && (
@@ -204,11 +202,12 @@ export function MusicPage() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SectionHeader({
-  icon: Icon, title, count, tone = "fuchsia", noMargin = false,
+  icon: Icon, title, count, tone = "fuchsia", noMargin = false, action,
 }: {
   icon: typeof Music; title: string; count: number;
   tone?: "fuchsia" | "amber";
   noMargin?: boolean;
+  action?: React.ReactNode;
 }) {
   const chip = tone === "amber"
     ? "bg-yellow-400/15 text-yellow-300"
@@ -223,6 +222,7 @@ function SectionHeader({
       </span>
       <h2 className="text-lg font-semibold tracking-tight text-zinc-100">{title}</h2>
       <span className={`rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${countChip}`}>{count}</span>
+      {action && <div className="ml-auto">{action}</div>}
     </div>
   );
 }
@@ -364,10 +364,10 @@ function CollectionCard({ collection: c }: { collection: MusicCollection }) {
   );
 }
 
-// "＋ New playlist" tile — idle dashed card that flips into an inline name
-// input. Creating navigates straight to the fresh playlist.
+// "＋ Новый плейлист" — lives in the Playlists section header. Idle pill that
+// flips into an inline name input; creating navigates to the fresh playlist.
 
-function NewCollectionCard() {
+function NewPlaylistButton() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [editing, setEditing] = useState(false);
@@ -382,48 +382,42 @@ function NewCollectionCard() {
     },
   });
 
+  if (editing) {
+    return (
+      <form
+        onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate(); }}
+        className="flex items-center gap-1.5"
+      >
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") { setEditing(false); setName(""); } }}
+          onBlur={() => { if (!name.trim()) setEditing(false); }}
+          placeholder="Название плейлиста…"
+          className="w-44 rounded-lg border border-zinc-700 bg-zinc-950/80 px-2.5 py-1.5 text-sm outline-none focus:border-fuchsia-500"
+        />
+        <button
+          type="submit"
+          disabled={create.isPending || !name.trim()}
+          className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg bg-fuchsia-500 text-white hover:bg-fuchsia-400 disabled:opacity-50"
+          aria-label="Создать"
+        >
+          {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+        </button>
+      </form>
+    );
+  }
+
   return (
-    <div className="group min-w-0 pt-2.5">
-      <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-fuchsia-700/20 via-purple-900/15 to-zinc-900 ring-1 ring-inset ring-white/10 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-fuchsia-400/40 group-hover:shadow-xl group-hover:shadow-fuchsia-900/30">
-        {/* Dashed inner frame for the "add" affordance, hidden while editing. */}
-        {!editing && (
-          <div className="pointer-events-none absolute inset-2 rounded-lg border border-dashed border-white/15 transition-colors group-hover:border-fuchsia-400/40" />
-        )}
-        {editing ? (
-          <form
-            onSubmit={(e) => { e.preventDefault(); if (name.trim()) create.mutate(); }}
-            className="flex w-full items-center gap-1.5 px-3"
-          >
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => { if (!name.trim()) setEditing(false); }}
-              placeholder="Название…"
-              className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-950/80 px-2.5 py-1.5 text-sm outline-none focus:border-fuchsia-500"
-            />
-            <button
-              type="submit"
-              disabled={create.isPending || !name.trim()}
-              className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg bg-fuchsia-500 text-white hover:bg-fuchsia-400 disabled:opacity-50"
-            >
-              {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            </button>
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="flex h-full w-full flex-col items-center justify-center gap-2 text-zinc-400 transition-colors hover:text-fuchsia-200"
-          >
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-fuchsia-500/15 text-fuchsia-200 ring-1 ring-fuchsia-400/30 transition-all duration-300 group-hover:scale-105 group-hover:bg-fuchsia-500/25">
-              <Plus className="h-5 w-5" />
-            </span>
-            <span className="text-xs font-medium">Новый плейлист</span>
-          </button>
-        )}
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="inline-flex items-center gap-1.5 rounded-full bg-fuchsia-500/15 px-3 py-1.5 text-sm font-medium text-fuchsia-200 ring-1 ring-fuchsia-400/30 transition-colors hover:bg-fuchsia-500/25 hover:text-fuchsia-100"
+    >
+      <Plus className="h-4 w-4" />
+      Новый плейлист
+    </button>
   );
 }
 
