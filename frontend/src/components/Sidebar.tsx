@@ -143,12 +143,14 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
               count={favoriteCount?.count ?? 0}
               
             />
-            <SidebarLink
-              icon={ListMusic}
-              label="Playlists"
-              to="/playlists"
-              count={playlists.length}
-            />
+            {playlists.length > 0 && (
+              <SidebarLink
+                icon={ListMusic}
+                label="Playlists"
+                to="/playlists"
+                count={playlists.length}
+              />
+            )}
             <SidebarLink
               icon={FolderDown}
               label="Manual"
