@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ListMusic, RefreshCw, Trash2, Play, ExternalLink, ChevronDown, ChevronUp,
-  Save, Loader2, Infinity as InfinityIcon, Music, Shuffle,
+  Save, Loader2, Infinity as InfinityIcon, Music, Shuffle, List, LayoutGrid,
 } from "lucide-react";
 import {
   playlistsApi, settingsApi, thumbUrl,
@@ -11,6 +11,7 @@ import {
 } from "../lib/api";
 import { formatBytes, formatDuration, timeAgo, describeQuality } from "../lib/format";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
+import { useLocalStorageString } from "../hooks/useLocalStorageString";
 import { setPlaylistQueue, shuffleArray } from "../lib/queue";
 import { useConfirm } from "../components/ConfirmProvider";
 
@@ -18,6 +19,10 @@ export function PlaylistPage() {
   const { playlistId } = useParams<{ playlistId: string }>();
   const id = Number(playlistId);
   const qc = useQueryClient();
+  // Tracklist layout — remembered globally (same key across every playlist).
+  const [view, setView] = useLocalStorageString<"list" | "grid">(
+    "playlist.view", "list", ["list", "grid"] as const,
+  );
   const confirm = useConfirm();
 
   const { data: playlist } = useQuery({
@@ -190,20 +195,120 @@ export function PlaylistPage() {
           Empty playlist. Try <span className="text-zinc-300">Sync</span>.
         </p>
       ) : (
-        <div className="overflow-hidden rounded-2xl bg-zinc-900/40">
-          {/* Header strip */}
-          <div className="hidden sm:grid grid-cols-[2rem_3.5rem_minmax(0,1fr)_5rem] gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 border-b border-zinc-800/60">
-            <span className="text-right">#</span>
-            <span></span>
-            <span>Title</span>
-            <span className="text-right">Time</span>
+        <>
+          {/* List ↔ grid toggle — choice persists globally across playlists. */}
+          <div className="mb-3 flex items-center justify-end">
+            <ViewToggle view={view} onChange={setView} />
           </div>
-          {videos.map((v, i) => (
-            <PlaylistRow key={v.id} v={v} position={i + 1} playlistId={id} />
-          ))}
-        </div>
+
+          {view === "list" ? (
+            <div className="overflow-hidden rounded-2xl bg-zinc-900/40">
+              {/* Header strip */}
+              <div className="hidden sm:grid grid-cols-[2rem_3.5rem_minmax(0,1fr)_5rem] gap-3 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 border-b border-zinc-800/60">
+                <span className="text-right">#</span>
+                <span></span>
+                <span>Title</span>
+                <span className="text-right">Time</span>
+              </div>
+              {videos.map((v, i) => (
+                <PlaylistRow key={v.id} v={v} position={i + 1} playlistId={id} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-x-4 gap-y-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {videos.map((v) => (
+                <PlaylistGridCard key={v.id} v={v} playlistId={id} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </>
+  );
+}
+
+function ViewToggle({
+  view, onChange,
+}: { view: "list" | "grid"; onChange: (v: "list" | "grid") => void }) {
+  const base = "grid h-8 w-8 place-items-center rounded-md transition-colors";
+  return (
+    <div className="inline-flex items-center gap-0.5 rounded-lg bg-zinc-900 p-0.5 ring-1 ring-white/10">
+      <button
+        type="button" onClick={() => onChange("list")} aria-label="Список" title="Список"
+        className={`${base} ${view === "list" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+      >
+        <List className="h-4 w-4" />
+      </button>
+      <button
+        type="button" onClick={() => onChange("grid")} aria-label="Сетка" title="Сетка"
+        className={`${base} ${view === "grid" ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+// Grid-view tile — same watch-with-playlist-context link as the list row, but
+// laid out as a thumbnail card (YouTube grid style).
+function PlaylistGridCard({
+  v, playlistId,
+}: { v: Video; playlistId: number }) {
+  const thumb = v.thumbnail_path ? thumbUrl(v.video_id) : v.thumbnail_url;
+  const watchable = v.status === "done";
+  const statusText =
+    v.status === "downloading" ? `Downloading ${v.progress ?? ""}` :
+    v.status === "error"       ? "Failed" :
+    v.status === "pending"     ? "Pending" :
+    v.status === "queued"      ? "Queued" :
+    null;
+
+  return (
+    <Link
+      to={watchable ? `/watch/${v.video_id}?playlist=${playlistId}` : `/watch/${v.video_id}`}
+      className={`group block min-w-0 ${watchable ? "" : "opacity-70"}`}
+    >
+      <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900">
+        {thumb ? (
+          <img src={thumb} alt="" referrerPolicy="no-referrer" loading="lazy"
+               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-zinc-700">
+            <Music className="h-8 w-8" />
+          </div>
+        )}
+
+        {watchable && (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 opacity-0 transition group-hover:bg-black/25 group-hover:opacity-100">
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-white text-zinc-950 shadow-lg shadow-black/40 scale-90 transition-transform group-hover:scale-100">
+              <Play className="h-5 w-5 translate-x-0.5 fill-current" />
+            </span>
+          </div>
+        )}
+
+        {v.duration ? (
+          <span className="absolute bottom-1 right-1 rounded bg-black/85 px-1.5 py-0.5 text-xs font-medium tabular-nums text-zinc-100">
+            {formatDuration(v.duration)}
+          </span>
+        ) : null}
+
+        {statusText && (
+          <span className={`absolute bottom-1 left-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+            v.status === "error" ? "bg-red-600/85 text-white" : "bg-amber-500/85 text-zinc-950"
+          }`}>
+            {statusText}
+          </span>
+        )}
+      </div>
+
+      <h3 className="mt-2 line-clamp-2 text-sm font-medium leading-snug text-zinc-100 break-words" title={v.title}>
+        {v.title}
+      </h3>
+      <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+        {v.channel_name}
+        {v.file_size_bytes && watchable ? ` · ${formatBytes(v.file_size_bytes, true)}` : ""}
+      </p>
+    </Link>
   );
 }
 
