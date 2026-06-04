@@ -2,53 +2,21 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HardDrive, AlertTriangle, Clock, Trash2, Tv, FileVideo, ShieldCheck, Loader2,
-  Music, ListMusic, Cpu,
+  Music, ListMusic,
 } from "lucide-react";
-import { storageApi, maintenanceApi, musicApi, thumbUrl, type ChannelStorage, type MusicPlaylistSize, type Sensors, type Video } from "../lib/api";
+import { storageApi, maintenanceApi, musicApi, thumbUrl, type ChannelStorage, type MusicPlaylistSize, type Video } from "../lib/api";
+import { TempChips, useSensors } from "../components/TempChips";
 import { formatBytes, formatDuration, timeAgo } from "../lib/format";
 import { useState } from "react";
 import { VideoCardMenu } from "../components/VideoCardMenu";
 import { useConfirm } from "../components/ConfirmProvider";
-
-/** Compact CPU + disk temperature chips for the dashboard header. Each chip
- *  tints green→amber→red as it warms; a missing reading hides that chip. */
-function TempChips({ sensors }: { sensors?: Sensors }) {
-  if (!sensors) return null;
-  const chips = [
-    { key: "cpu",  Icon: Cpu,       label: "CPU",  val: sensors.cpu_temp,  warn: 75, hot: 82 },
-    { key: "disk", Icon: HardDrive, label: "Disk", val: sensors.disk_temp, warn: 55, hot: 65 },
-  ].filter((c) => c.val != null);
-  if (chips.length === 0) return null;
-
-  const tone = (v: number, warn: number, hot: number) =>
-    v >= hot  ? "border-red-500/40 bg-red-500/10 text-red-300"
-  : v >= warn ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-  :             "border-zinc-700/70 bg-zinc-900/60 text-zinc-300";
-
-  return (
-    <div className="ml-auto flex items-center gap-1.5 self-start">
-      {chips.map(({ key, Icon, label, val, warn, hot }) => (
-        <span
-          key={key}
-          title={`${label} temperature`}
-          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium tabular-nums ${tone(val!, warn, hot)}`}
-        >
-          <Icon className="h-3.5 w-3.5 opacity-80" />
-          {Math.round(val!)}°
-        </span>
-      ))}
-    </div>
-  );
-}
 
 export function StoragePage() {
   const { data: summary }           = useQuery({ queryKey: ["storage", "summary"],          queryFn: storageApi.summary });
   const { data: biggest = [] }      = useQuery({ queryKey: ["storage", "largest-videos"],   queryFn: () => storageApi.largestVideos(30) });
   const { data: channels = [] }     = useQuery({ queryKey: ["storage", "largest-channels"], queryFn: () => storageApi.largestChannels(15) });
   const [minDays, setMinDays] = useState(30);
-  const { data: sensors }           = useQuery({
-    queryKey: ["storage", "sensors"], queryFn: storageApi.sensors, refetchInterval: 60_000,
-  });
+  const { data: sensors }           = useSensors();
   const { data: oldWatched = [] }   = useQuery({
     queryKey: ["storage", "old-watched", minDays],
     queryFn: () => storageApi.oldWatched(minDays, 50),
@@ -65,7 +33,7 @@ export function StoragePage() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Storage</h1>
           <p className="text-sm text-zinc-400">What's eating your disk</p>
         </div>
-        <TempChips sensors={sensors} />
+        <TempChips sensors={sensors} className="ml-auto self-start" />
       </header>
 
       {/* KPI cards */}

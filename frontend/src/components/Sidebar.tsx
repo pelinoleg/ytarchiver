@@ -11,6 +11,7 @@ import {
   type Channel, type ChannelFolder, type Video,
 } from "../lib/api";
 import { formatBytes, formatCount } from "../lib/format";
+import { TempInline, useSensors } from "./TempChips";
 import { useLocalStorageBool } from "../hooks/useLocalStorageBool";
 import { useState, useEffect } from "react";
 import { ChevronRight } from "lucide-react";
@@ -628,6 +629,7 @@ function StatsFooter({
   manualCount:    number;
 }) {
   const [open, setOpen] = useLocalStorageBool("sidebar.stats.open", false);
+  const { data: sensors } = useSensors();
   return (
     <div className="hidden xl:block flex-shrink-0 border-t border-white/5">
       <button
@@ -645,10 +647,13 @@ function StatsFooter({
             {formatCount(stats.videos)} videos · {formatBytes(stats.total_bytes)}
           </span>
         )}
-        <span className={`text-zinc-500 ${open ? "" : "ml-1"}`}>
+        <span className={`text-zinc-500 ${open ? "ml-auto" : "ml-1"}`}>
           {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
         </span>
       </button>
+      {/* Always-visible colored CPU + disk temperature — the at-a-glance health
+          readout for the storage block. Self-hides when no reading is available. */}
+      <TempInline sensors={sensors} className="justify-end px-4 pb-1.5 text-[11px]" />
       {open && (
         <div className="px-4 pb-3">
           {stats ? (
