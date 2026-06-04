@@ -138,7 +138,7 @@ export function MusicPage() {
                 icon={ListMusic} title="Playlists"
                 count={playlists.length + collections.length + (favorites.length > 0 ? 1 : 0)}
               />
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                 {/* New-playlist tile first — the primary "make a collection"
                  *  action sits at the front of the row. */}
                 <NewCollectionCard />
@@ -291,7 +291,7 @@ function CollectionCard({ collection: c }: { collection: MusicCollection }) {
       <PlaylistStack accent="bg-fuchsia-500/35" accentSoft="bg-fuchsia-500/15">
         <Link
           to={`/music/collection/${c.id}`}
-          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-fuchsia-400/50 group-hover:shadow-xl group-hover:shadow-fuchsia-900/40"
+          className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-fuchsia-400/50 group-hover:shadow-xl group-hover:shadow-fuchsia-900/40"
         >
           {c.covers.length > 0 ? (
             <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-zinc-950">
@@ -315,48 +315,51 @@ function CollectionCard({ collection: c }: { collection: MusicCollection }) {
             </div>
           )}
 
-          {/* Top sheen + bottom scrim for depth + chip legibility. */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent opacity-60" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+          {/* Poster gradient — strong at the foot so the title reads on it. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/10 to-transparent opacity-60" />
           <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow ring-1 ring-white/20 backdrop-blur-sm">
             <ListMusic className="h-3 w-3" />
             Local
           </span>
-          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
+          <span className="absolute top-1.5 right-1.5 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
             {c.done_count}
           </span>
         </Link>
 
-        {c.done_count > 0 && (
-          <div className="pointer-events-none absolute right-2 bottom-7 flex items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
-            <button
-              onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
-              aria-label="Shuffle"
-              title="Shuffle"
-              className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-zinc-900/90 text-fuchsia-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
-            >
-              <Shuffle className="h-4 w-4" />
-            </button>
-            <button
-              onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
-              aria-label="Play"
-              title="Play"
-              className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-fuchsia-500 text-white shadow-xl shadow-fuchsia-900/50 hover:bg-fuchsia-400 active:scale-95 transition-transform"
-            >
-              <Play className="h-5 w-5 fill-current translate-x-0.5" />
-            </button>
+        {/* Bottom bar overlaid on the poster: name + count on the left,
+         *  play/shuffle on the right. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2 p-2.5 pt-10">
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]" title={c.name}>
+              {c.name}
+            </h3>
+            <p className="mt-0.5 truncate text-[11px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              {c.done_count} {c.done_count === 1 ? "track" : "tracks"}
+            </p>
           </div>
-        )}
+          {c.done_count > 0 && (
+            <div className="pointer-events-auto flex flex-shrink-0 items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+              <button
+                onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
+                aria-label="Shuffle"
+                title="Shuffle"
+                className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900/90 text-fuchsia-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
+              >
+                <Shuffle className="h-4 w-4" />
+              </button>
+              <button
+                onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
+                aria-label="Play"
+                title="Play"
+                className="grid h-10 w-10 place-items-center rounded-full bg-fuchsia-500 text-white shadow-xl shadow-fuchsia-900/50 hover:bg-fuchsia-400 active:scale-95 transition-transform"
+              >
+                <Play className="h-5 w-5 fill-current translate-x-0.5" />
+              </button>
+            </div>
+          )}
+        </div>
       </PlaylistStack>
-
-      <Link to={`/music/collection/${c.id}`} className="block mt-2.5">
-        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-zinc-100 group-hover:text-white transition-colors break-words" title={c.name}>
-          {c.name}
-        </h3>
-        <p className="mt-0.5 truncate text-[11px] text-zinc-500">
-          {c.done_count} {c.done_count === 1 ? "track" : "tracks"}
-        </p>
-      </Link>
     </div>
   );
 }
@@ -381,7 +384,7 @@ function NewCollectionCard() {
 
   return (
     <div className="group min-w-0 pt-2.5">
-      <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-fuchsia-700/20 via-purple-900/15 to-zinc-900 ring-1 ring-inset ring-white/10 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-fuchsia-400/40 group-hover:shadow-xl group-hover:shadow-fuchsia-900/30">
+      <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-fuchsia-700/20 via-purple-900/15 to-zinc-900 ring-1 ring-inset ring-white/10 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-fuchsia-400/40 group-hover:shadow-xl group-hover:shadow-fuchsia-900/30">
         {/* Dashed inner frame for the "add" affordance, hidden while editing. */}
         {!editing && (
           <div className="pointer-events-none absolute inset-2 rounded-lg border border-dashed border-white/15 transition-colors group-hover:border-fuchsia-400/40" />
@@ -452,7 +455,7 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
         <button
           type="button"
           onClick={() => play(getMusicShuffle())}
-          className="relative block aspect-video w-full overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 text-left transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-yellow-400/50 group-hover:shadow-xl group-hover:shadow-yellow-900/40"
+          className="relative block aspect-[3/4] w-full overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 text-left transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-yellow-400/50 group-hover:shadow-xl group-hover:shadow-yellow-900/40"
           aria-label="Play favorites"
         >
           {covers.length > 0 ? (
@@ -480,8 +483,9 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent opacity-60" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+          {/* Poster gradient — strong at the foot so the title reads on it. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/10 to-transparent opacity-60" />
 
           {/* Top-left FAVORITES pill — strong identity, matches other cards. */}
           <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-yellow-400/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-950 shadow ring-1 ring-white/25 backdrop-blur-sm">
@@ -489,18 +493,28 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
             Liked
           </span>
 
-          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
+          <span className="absolute top-1.5 right-1.5 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
             {tracks.length}
           </span>
+
+          {/* Title + count overlaid at the foot. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-2.5 pt-10">
+            <h3 className="text-sm font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              Liked
+            </h3>
+            <p className="mt-0.5 text-[11px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              {tracks.length === 1 ? "1 track" : `${tracks.length} tracks`}
+            </p>
+          </div>
         </button>
 
-        {/* FABs — bottom-right of cover. */}
-        <div className="pointer-events-none absolute right-2 bottom-7 flex items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+        {/* FABs — bottom-right of the poster, above the title's right edge. */}
+        <div className="pointer-events-none absolute right-2 bottom-2.5 flex items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
           <button
             onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
             aria-label="Shuffle favorites"
             title="Shuffle"
-            className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-zinc-900/90 text-yellow-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
+            className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-zinc-900/90 text-yellow-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
           >
             <Shuffle className="h-4 w-4" />
           </button>
@@ -508,21 +522,12 @@ function FavoritesPlaylistCard({ tracks }: { tracks: Video[] }) {
             onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
             aria-label="Play favorites"
             title="Play"
-            className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-yellow-400 text-yellow-950 shadow-xl shadow-yellow-900/50 hover:bg-yellow-300 active:scale-95 transition-transform"
+            className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-yellow-400 text-yellow-950 shadow-xl shadow-yellow-900/50 hover:bg-yellow-300 active:scale-95 transition-transform"
           >
             <Play className="h-5 w-5 fill-current translate-x-0.5" />
           </button>
         </div>
       </PlaylistStack>
-
-      <div className="mt-2.5">
-        <h3 className="text-sm font-medium leading-snug text-zinc-100 group-hover:text-white transition-colors">
-          Liked
-        </h3>
-        <p className="mt-0.5 text-[11px] text-zinc-500">
-          {tracks.length === 1 ? "1 track" : `${tracks.length} tracks`}
-        </p>
-      </div>
     </div>
   );
 }
@@ -684,7 +689,7 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
       <PlaylistStack accent="bg-fuchsia-500/35" accentSoft="bg-fuchsia-500/15">
         <Link
           to={`/playlist/${p.id}`}
-          className="relative block aspect-video overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-fuchsia-400/50 group-hover:shadow-xl group-hover:shadow-fuchsia-900/40"
+          className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-fuchsia-400/50 group-hover:shadow-xl group-hover:shadow-fuchsia-900/40"
         >
           {p.thumbnail_url ? (
             <img
@@ -700,9 +705,9 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
             </div>
           )}
 
-          {/* Top sheen + bottom scrim for depth + chip legibility. */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent opacity-60" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+          {/* Poster gradient — strong at the foot so the title reads on it. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/10 to-transparent opacity-60" />
 
           {/* Top-left: explicit MUSIC pill so the card identity is obvious. */}
           <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-fuchsia-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow ring-1 ring-white/20 backdrop-blur-sm">
@@ -710,72 +715,65 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
             {search ? "Search" : "Music"}
           </span>
 
-          {/* Top-right: keep-forever badge only when on. */}
-          {p.keep_videos_forever && (
-            <span
-              title="Videos in this playlist are never auto-deleted"
-              className="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded-full bg-amber-400/95 text-amber-950 shadow ring-1 ring-white/25"
-            >
-              <InfinityIcon className="h-3 w-3" strokeWidth={3} />
+          {/* Top-right: count + keep-forever badge. */}
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+            {p.keep_videos_forever && (
+              <span
+                title="Videos in this playlist are never auto-deleted"
+                className="grid h-5 w-5 place-items-center rounded-full bg-amber-400/95 text-amber-950 shadow ring-1 ring-white/25"
+              >
+                <InfinityIcon className="h-3 w-3" strokeWidth={3} />
+              </span>
+            )}
+            <span className="rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
+              {isComplete ? `${total}` : `${done}/${total}`}
             </span>
-          )}
-
-          {/* Bottom-left count badge. */}
-          <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
-            {isComplete ? `${total}` : `${done}/${total}`}
-          </span>
-
-          {/* Hairline progress at the very bottom. */}
-          {total > 0 && (
-            <div className="absolute inset-x-0 bottom-0 h-[3px] bg-black/40">
-              <div
-                className={`h-full ${isComplete ? "bg-emerald-400" : "bg-fuchsia-400"}`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          )}
+          </div>
         </Link>
 
-        {/* Music FABs — bottom-right of cover. Always on for phones,
-         *  fade up on desktop hover. Sized to feel like a real player
-         *  control, not a tiny chip. */}
-        <div className="pointer-events-none absolute right-2 bottom-7 flex items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
-          <button
-            onClick={(e) => { e.preventDefault(); setMusicShuffle(true); startPlaylist(true); }}
-            aria-label="Shuffle play"
-            title="Shuffle"
-            className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full bg-zinc-900/90 text-fuchsia-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
-          >
-            <Shuffle className="h-4 w-4" />
-          </button>
-          <button
-            onClick={(e) => { e.preventDefault(); startPlaylist(getMusicShuffle()); }}
-            aria-label="Play"
-            title="Play"
-            className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full bg-fuchsia-500 text-white shadow-xl shadow-fuchsia-900/50 hover:bg-fuchsia-400 active:scale-95 transition-transform"
-          >
-            <Play className="h-5 w-5 fill-current translate-x-0.5" />
-          </button>
-        </div>
-      </PlaylistStack>
-
-      <Link to={`/playlist/${p.id}`} className="block mt-2.5">
-        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-zinc-100 group-hover:text-white transition-colors break-words" title={p.title}>
-          {p.title}
-        </h3>
-        {p.uploader && !search && (
-          <p className="mt-0.5 truncate text-[11px] text-zinc-500">{p.uploader}</p>
-        )}
-
-        <div className="mt-1.5">
-          <div className="flex items-center justify-between text-[11px] tabular-nums">
-            <span className={isComplete ? "text-emerald-400 font-medium" : "text-zinc-500"}>
-              {isComplete ? "All downloaded" : `${done} of ${total}`}
-            </span>
-            <span className="text-zinc-500">synced {timeAgo(p.last_synced)}</span>
+        {/* Bottom bar overlaid on the poster: title + meta on the left, the
+         *  play/shuffle controls on the right. pointer-events-none lets clicks
+         *  on the text fall through to the cover Link; the FABs opt back in. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2 p-2.5 pt-10">
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]" title={p.title}>
+              {p.title}
+            </h3>
+            <p className="mt-0.5 truncate text-[11px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              {p.uploader && !search ? `${p.uploader} · ` : ""}
+              {isComplete ? "all downloaded" : `${done}/${total}`} · {timeAgo(p.last_synced)}
+            </p>
+          </div>
+          <div className="pointer-events-auto flex flex-shrink-0 items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+            <button
+              onClick={(e) => { e.preventDefault(); setMusicShuffle(true); startPlaylist(true); }}
+              aria-label="Shuffle play"
+              title="Shuffle"
+              className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900/90 text-fuchsia-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); startPlaylist(getMusicShuffle()); }}
+              aria-label="Play"
+              title="Play"
+              className="grid h-10 w-10 place-items-center rounded-full bg-fuchsia-500 text-white shadow-xl shadow-fuchsia-900/50 hover:bg-fuchsia-400 active:scale-95 transition-transform"
+            >
+              <Play className="h-5 w-5 fill-current translate-x-0.5" />
+            </button>
           </div>
         </div>
-      </Link>
+
+        {/* Hairline progress at the very bottom. */}
+        {total > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-black/40">
+            <div
+              className={`h-full ${isComplete ? "bg-emerald-400" : "bg-fuchsia-400"}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        )}
+      </PlaylistStack>
     </div>
   );
 }

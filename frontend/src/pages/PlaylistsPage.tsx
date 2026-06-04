@@ -23,7 +23,7 @@ export function PlaylistsPage() {
       {isLoading ? (
         <CardGrid>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="aspect-[4/5] rounded-2xl bg-zinc-900 animate-pulse" />
+            <div key={i} className="aspect-video rounded-xl bg-zinc-900 animate-pulse" />
           ))}
         </CardGrid>
       ) : playlists.length === 0 ? (
@@ -136,8 +136,10 @@ function PlaylistCard({ playlist: p }: { playlist: Playlist }) {
             </div>
           )}
 
-          {/* Subtle gradient at the bottom for chip legibility. */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/65 to-transparent" />
+          {/* Full-height gradient so the title + meta overlaid at the bottom
+           *  stay legible over any thumbnail. Stronger at the foot, fading out
+           *  by the upper third. */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
 
           {/* Hover Play overlay. */}
           <div className="pointer-events-none absolute inset-0 grid place-items-center transition-colors duration-300 group-hover:bg-black/25">
@@ -152,20 +154,35 @@ function PlaylistCard({ playlist: p }: { playlist: Playlist }) {
             {search ? "Search" : "Playlist"}
           </span>
 
-          {/* Top-right: keep-forever badge (only when on). */}
-          {p.keep_videos_forever && (
-            <span
-              title="Videos in this playlist are never auto-deleted"
-              className="absolute top-1.5 right-1.5 grid h-5 w-5 place-items-center rounded-full bg-amber-400/95 text-amber-950 shadow"
-            >
-              <InfinityIcon className="h-3 w-3" strokeWidth={3} />
+          {/* Top-right: count badge + (optional) keep-forever, side by side. */}
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
+            {p.keep_videos_forever && (
+              <span
+                title="Videos in this playlist are never auto-deleted"
+                className="grid h-5 w-5 place-items-center rounded-full bg-amber-400/95 text-amber-950 shadow"
+              >
+                <InfinityIcon className="h-3 w-3" strokeWidth={3} />
+              </span>
+            )}
+            <span className="rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+              {isComplete ? `${total}` : `${done}/${total}`}
             </span>
-          )}
+          </div>
 
-          {/* Bottom-right count badge — at-a-glance progress / total. */}
-          <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
-            {isComplete ? `${total}` : `${done}/${total}`}
-          </span>
+          {/* Title + meta — overlaid on the cover, sitting just above the
+           *  progress hairline. */}
+          <div className="absolute inset-x-0 bottom-0 p-2.5 pt-6">
+            <h3
+              className="line-clamp-2 text-sm font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+              title={p.title}
+            >
+              {p.title}
+            </h3>
+            <p className="mt-0.5 truncate text-[11px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+              {p.uploader && !search ? `${p.uploader} · ` : ""}
+              <SyncMeta playlist={p} />
+            </p>
+          </div>
 
           {/* Hairline progress at the very bottom. */}
           {total > 0 && (
@@ -178,20 +195,6 @@ function PlaylistCard({ playlist: p }: { playlist: Playlist }) {
           )}
         </div>
       </PlaylistStack>
-
-      {/* Title + meta — kept under the cover, breathing room. */}
-      <div className="mt-2.5 min-w-0">
-        <h3
-          className="line-clamp-2 text-sm font-medium leading-snug text-zinc-100 group-hover:text-white transition-colors"
-          title={p.title}
-        >
-          {p.title}
-        </h3>
-        <p className="mt-0.5 truncate text-[11px] text-zinc-500">
-          {p.uploader && !search ? `${p.uploader} · ` : ""}
-          <SyncMeta playlist={p} />
-        </p>
-      </div>
     </Link>
   );
 }
