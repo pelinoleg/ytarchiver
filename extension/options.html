@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; background: #09090b; color: #f4f4f5;
+      font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 380px; padding: 18px;
+    }
+    h1 { font-size: 16px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+    .dot { width: 20px; height: 20px; border-radius: 6px;
+      background: linear-gradient(180deg, #ef4444, #b91c1c);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; }
+    p.sub { color: #a1a1aa; font-size: 12px; margin: 0 0 16px; }
+    label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase; color: #a1a1aa; margin-bottom: 6px; }
+    input {
+      width: 100%; box-sizing: border-box; background: #18181b; color: #f4f4f5;
+      border: 1px solid #3f3f46; border-radius: 9px; padding: 9px 11px; font-size: 13px;
+    }
+    input:focus { outline: none; border-color: #ef4444; }
+    .hint { color: #71717a; font-size: 11px; margin: 7px 0 0; }
+    .row { display: flex; gap: 8px; margin-top: 16px; align-items: center; }
+    button {
+      appearance: none; border: 0; cursor: pointer; border-radius: 999px;
+      padding: 9px 16px; font-size: 13px; font-weight: 700;
+    }
+    .save { background: linear-gradient(180deg, #ef4444, #b91c1c); color: #fff; }
+    .test { background: #27272a; color: #f4f4f5; }
+    button:hover { filter: brightness(1.08); }
+    #status { font-size: 12px; margin-left: auto; }
+    .ok { color: #34d399; } .err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1><span class="dot">YT</span> Настройки</h1>
+  <p class="sub">Адрес твоего YT Archiver сервера в локальной сети.</p>
+
+  <label for="server">Адрес сервера</label>
+  <input id="server" type="text" placeholder="http://pi5.local:8080" spellcheck="false" autocapitalize="off" />
+  <p class="hint">Напр. <code>http://pi5.local:8080</code> или <code>http://192.168.1.50:8080</code>. Схему <code>http://</code> можно не писать.</p>
+
+  <div class="row">
+    <button class="save" id="save">Сохранить</button>
+    <button class="test" id="test">Проверить</button>
+    <span id="status"></span>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
