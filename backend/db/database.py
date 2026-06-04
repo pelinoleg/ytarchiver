@@ -223,6 +223,18 @@ _MIGRATIONS: list[tuple[str, list[str]]] = [
         # track to save bandwidth on cellular. NULL until extracted.
         "ALTER TABLE videos ADD COLUMN audio_path TEXT",
     ]),
+    ("0024_music_lookup_indexes", [
+        # The music list (and IS_MUSIC_SQL / COLLECTION_IDS_SQL everywhere)
+        # probes these link tables by video_id alone. The existing indexes and
+        # UNIQUE constraints are all (parent_id, …)-leading, so a lookup by
+        # video_id falls back to a full table scan — run once PER ROW of the
+        # music grid. These video_id-leading indexes make those EXISTS/JOINs
+        # index seeks instead, which is the bulk of the Music page load time.
+        "CREATE INDEX IF NOT EXISTS idx_playlist_videos_video "
+        "  ON playlist_videos(video_id)",
+        "CREATE INDEX IF NOT EXISTS idx_music_collection_videos_video "
+        "  ON music_collection_videos(video_id)",
+    ]),
 ]
 
 
