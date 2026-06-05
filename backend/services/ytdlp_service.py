@@ -194,7 +194,8 @@ def extract_info(url: str, opts: dict, *, download: bool = False, process: bool 
         try:
             res = _run(url, net_opts, download, process)
             _last_good_net = net
-            _record("ok", net)
+            if download:
+                _record("ok", net)
             return res
         except Exception as e:
             last_exc = e
@@ -203,7 +204,8 @@ def extract_info(url: str, opts: dict, *, download: bool = False, process: bool 
                 try:
                     res = _run(url, {**net_opts, **cookies}, download, process)
                     _last_good_net = net
-                    _record("ok", net)
+                    if download:
+                        _record("ok", net)
                     return res
                 except Exception as e2:
                     last_exc = e2
@@ -216,7 +218,7 @@ def extract_info(url: str, opts: dict, *, download: bool = False, process: bool 
                 continue
             raise
 
-    if last_exc is not None and _is_blocked(last_exc):
+    if download and last_exc is not None and _is_blocked(last_exc):
         reason = ("captcha" if "captcha" in str(last_exc).lower()
                   else "bot wall" if _is_bot_wall(last_exc)
                   else "no formats" if "format" in str(last_exc).lower()

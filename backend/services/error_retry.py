@@ -45,8 +45,12 @@ PERMANENT_ERROR_MARKERS = (
     "this live event will begin",
     "premieres in",
     "deleted video",
-    "requested format is not available",
-    "no video formats found",
+    # NB: "requested format is not available" / "no video formats found" are
+    # deliberately NOT here — on a rate-limited / bot-flagged server IP YouTube
+    # serves only storyboard images and yt-dlp reports exactly those. That's
+    # transient (clears with a cooldown / a clean VPN exit), so treating it as
+    # permanent wrongly buried the videos in 'skipped'. They now go to 'error'
+    # (visible in Downloads → Failed, and auto-retried by the sweeper).
     "sign in to confirm your age",
     "copyright",
     "terms of service violation",
