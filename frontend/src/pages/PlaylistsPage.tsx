@@ -107,8 +107,9 @@ function PlaylistCard({ playlist: p }: { playlist: Playlist }) {
   const search = isSearch(p);
   const total  = p.video_count || p.item_count;
   const done   = p.done_count;
-  const pct    = total > 0 ? Math.min(100, (done / total) * 100) : 0;
-  const isComplete = total > 0 && done >= total;
+  // done/total only while something is still downloading; otherwise the count.
+  const downloading = (p.active_count ?? 0) > 0;
+  const countLabel = downloading ? `${done}/${total}` : `${total}`;
 
   return (
     <Link
@@ -165,12 +166,11 @@ function PlaylistCard({ playlist: p }: { playlist: Playlist }) {
               </span>
             )}
             <span className="rounded-md bg-black/85 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
-              {isComplete ? `${total}` : `${done}/${total}`}
+              {countLabel}
             </span>
           </div>
 
-          {/* Title + meta — overlaid on the cover, sitting just above the
-           *  progress hairline. */}
+          {/* Title + meta — overlaid on the cover. */}
           <div className="absolute inset-x-0 bottom-0 p-2.5 pt-6">
             <h3
               className="line-clamp-2 text-sm font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
@@ -183,16 +183,6 @@ function PlaylistCard({ playlist: p }: { playlist: Playlist }) {
               <SyncMeta playlist={p} />
             </p>
           </div>
-
-          {/* Hairline progress at the very bottom. */}
-          {total > 0 && (
-            <div className="absolute inset-x-0 bottom-0 h-[3px] bg-black/40">
-              <div
-                className={`h-full ${isComplete ? "bg-emerald-400" : "bg-red-500"}`}
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          )}
         </div>
       </PlaylistStack>
     </Link>

@@ -12,7 +12,7 @@ import {
 } from "../lib/api";
 import { AddToPlaylistList } from "../components/AddToPlaylistButton";
 import { useSelection } from "../components/SelectionProvider";
-import { formatBytes, formatDuration, formatUploadDate, timeAgo } from "../lib/format";
+import { formatBytes, formatDuration, formatUploadDate } from "../lib/format";
 import { setMusicQueue, shuffleArray, getMusicShuffle, setMusicShuffle } from "../lib/queue";
 import { VirtualVideoGrid } from "../components/VirtualVideoGrid";
 import { PlaylistStack } from "../components/PlaylistStack";
@@ -691,8 +691,10 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
 
   const total = p.video_count || p.item_count;
   const done  = p.done_count;
-  const pct   = total > 0 ? Math.min(100, (done / total) * 100) : 0;
-  const isComplete = total > 0 && done >= total;
+  // Only show the done/total progress WHILE something is still downloading.
+  // Once the queue drains (even if some failed) just show the track count.
+  const downloading = (p.active_count ?? 0) > 0;
+  const countLabel = downloading ? `${done}/${total}` : `${total}`;
 
   return (
     <div className="group block min-w-0">
@@ -752,7 +754,7 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
               </span>
             )}
             <span className="rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
-              {isComplete ? `${total}` : `${done}/${total}`}
+              {countLabel}
             </span>
           </div>
         </Link>
@@ -767,7 +769,7 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
             </h3>
             <p className="mt-0.5 truncate text-[11px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
               {p.uploader && !search ? `${p.uploader} · ` : ""}
-              {isComplete ? "all downloaded" : `${done}/${total}`} · {timeAgo(p.last_synced)}
+              {downloading ? `качается ${done}/${total}` : `${total} ${total === 1 ? "track" : "tracks"}`}
             </p>
           </div>
           <div className="pointer-events-auto flex flex-shrink-0 items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
@@ -789,16 +791,6 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
             </button>
           </div>
         </div>
-
-        {/* Hairline progress at the very bottom. */}
-        {total > 0 && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-black/40">
-            <div
-              className={`h-full ${isComplete ? "bg-emerald-400" : "bg-fuchsia-400"}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        )}
       </PlaylistStack>
     </div>
   );

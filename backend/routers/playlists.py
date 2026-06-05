@@ -53,6 +53,7 @@ class PlaylistOut(BaseModel):
     video_count: int = 0
     item_count: int = 0
     done_count: int = 0
+    active_count: int = 0   # pending/queued/downloading members → "still downloading"
     quality: Optional[str] = None
     retention_days: Optional[int] = None
     keep_videos_forever: bool = False

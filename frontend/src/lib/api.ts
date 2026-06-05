@@ -248,6 +248,7 @@ export interface Playlist {
   video_count: number;
   item_count: number;
   done_count: number;
+  active_count: number;   // pending/queued/downloading → still downloading
   quality: string | null;
   retention_days: number | null;
   keep_videos_forever: boolean;
