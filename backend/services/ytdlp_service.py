@@ -41,6 +41,11 @@ def yt_opts_extra() -> dict:
         ea["youtubepot-bgutilhttp"] = {"base_url": [settings.pot_provider_url]}
     if ea:
         out["extractor_args"] = ea
+    # EJS challenge solver — required (with deno) to solve the YouTube signature
+    # / n-challenge; without it formats come back storyboard-only.
+    rc = [c.strip() for c in (settings.ytdlp_remote_components or "").split(",") if c.strip()]
+    if rc:
+        out["remote_components"] = rc
     # Politeness throttle — space requests/downloads so bursts (esp. a channel
     # sync walking many videos) don't trip YouTube's rate-limiter / captcha.
     if settings.ytdlp_sleep_requests and settings.ytdlp_sleep_requests > 0:

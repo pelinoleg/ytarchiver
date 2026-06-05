@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     # nsig + GVS PO token to work.
     youtube_player_client: str = "default,-android_vr"
 
+    # yt-dlp's signature / n-challenge solving now needs a downloadable EJS
+    # solver script IN ADDITION to the deno runtime. Without it YouTube returns
+    # storyboard-only formats and downloads fail with "Requested format is not
+    # available". Comma-separated remote-component specs; "ejs:github" fetches
+    # the official solver from the yt-dlp GitHub releases. Empty to disable.
+    ytdlp_remote_components: str = "ejs:github"
+
     # Base URL of the bgutil Proof-of-Origin token provider (e.g.
     # ``http://bgutil-provider:4416``). When set, the bgutil yt-dlp plugin uses
     # it to mint POT tokens — the cookie-free fix for the "confirm you're not a
