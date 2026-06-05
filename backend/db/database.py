@@ -493,6 +493,20 @@ class DB:
             "ORDER BY p.title COLLATE NOCASE ASC"
         ).fetchall()
 
+    def playlist_cover_videos(self, playlist_id: int, limit: int = 4):
+        """Up to N member thumbnails for a playlist's mosaic cover, in order —
+        mirrors collection_cover_videos so music playlists render the same 2x2
+        tile as local collections instead of a single YouTube cover."""
+        return self.conn.execute(
+            "SELECT v.video_id, v.thumbnail_path, v.thumbnail_url "
+            "FROM playlist_videos pv "
+            "JOIN videos v ON v.video_id = pv.video_id "
+            "WHERE pv.playlist_id = ? AND v.status = 'done' "
+            "  AND (v.thumbnail_path IS NOT NULL OR v.thumbnail_url IS NOT NULL) "
+            "ORDER BY pv.position LIMIT ?",
+            (playlist_id, limit),
+        ).fetchall()
+
     def list_music_channels(self):
         """Subscribed channels flagged as music. Every done video counts as a
         track (all of a music channel's videos are music), so the count is a

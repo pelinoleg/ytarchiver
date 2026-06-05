@@ -61,6 +61,9 @@ class PlaylistOut(BaseModel):
     last_sync_added_count: Optional[int] = None
     last_sync_error: Optional[str] = None
     created_at: Optional[str] = None
+    # Up to 4 member thumbnails for a mosaic cover (attached by the music
+    # playlists endpoint). None elsewhere → consumers fall back to thumbnail_url.
+    covers: Optional[list[dict]] = None
 
     @classmethod
     def from_row(cls, row):

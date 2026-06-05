@@ -701,7 +701,23 @@ function MusicPlaylistCard({ playlist: p }: { playlist: Playlist }) {
           to={`/playlist/${p.id}`}
           className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-fuchsia-400/50 group-hover:shadow-xl group-hover:shadow-fuchsia-900/40"
         >
-          {p.thumbnail_url ? (
+          {p.covers && p.covers.length > 0 ? (
+            <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-zinc-950">
+              {p.covers.map((cov) => (
+                <img
+                  key={cov.video_id}
+                  src={cov.thumbnail_path ? thumbUrl(cov.video_id) : cov.thumbnail_url!}
+                  referrerPolicy="no-referrer"
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                />
+              ))}
+              {p.covers.length < 4 && Array.from({ length: 4 - p.covers.length }).map((_, i) => (
+                <div key={i} className="bg-gradient-to-br from-fuchsia-700/30 via-purple-900/25 to-zinc-900" />
+              ))}
+            </div>
+          ) : p.thumbnail_url ? (
             <img
               src={p.thumbnail_url}
               alt=""

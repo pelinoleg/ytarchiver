@@ -38,7 +38,16 @@ def list_track_ids(sort: str = "added", dir: str = "desc", db: DB = Depends(get_
 
 @router.get("/playlists", response_model=list[PlaylistOut])
 def list_playlists(db: DB = Depends(get_db)):
-    return [PlaylistOut.from_row(r) for r in db.list_music_playlists()]
+    out = []
+    for r in db.list_music_playlists():
+        po = PlaylistOut.from_row(r)
+        po.covers = [
+            {"video_id": c["video_id"], "thumbnail_path": c["thumbnail_path"],
+             "thumbnail_url": c["thumbnail_url"]}
+            for c in db.playlist_cover_videos(r["id"], limit=4)
+        ]
+        out.append(po)
+    return out
 
 
 @router.get("/channels", response_model=list[ChannelOut])

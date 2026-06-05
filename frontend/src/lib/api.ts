@@ -256,6 +256,7 @@ export interface Playlist {
   last_sync_added_count: number | null;
   last_sync_error: string | null;
   created_at: string | null;
+  covers?: CollectionCover[];   // up to 4 member thumbs (music playlists only)
 }
 
 export const playlistsApi = {
