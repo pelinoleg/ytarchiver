@@ -1,85 +1,37 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Reference: route the backend's yt-dlp through several per-country WireGuard
-# tunnels and let the app rotate them automatically when YouTube blocks one.
+# Folder-driven WireGuard exit pool for yt-dlp.
 #
-# How it works
-#   • Each gluetun container holds ONE WireGuard config (one country) and exposes
-#     an HTTP proxy on :8888 inside the Docker network.
-#   • The backend gets YTDLP_PROXIES = comma-separated list of those proxies.
-#   • On a bot wall / captcha / storyboard-only / dead-tunnel, extract_info
-#     rotates to the next exit and remembers the last one that worked.
+# Drop WireGuard *.conf files into a folder; the backend brings up one gluetun
+# tunnel per file (via the Docker socket), routes yt-dlp through the HEALTHY
+# ones, and rotates on a YouTube block. No working configs → direct download.
+# Stale/broken configs never go healthy, so they're simply ignored.
+#
+# It's all opt-in via three things on the EXISTING backend service — no extra
+# services to declare here (the tunnels are created at runtime as wgvpn-*):
+#
+#   backend:
+#     environment:
+#       WIREGUARD_CONFIGS_DIR: /wireguard
+#       VPN_DOCKER_NETWORK: ytarchiver_ytarchiver_net   # the compose network name
+#     volumes:
+#       - /var/run/docker.sock:/var/run/docker.sock     # to spawn the tunnels
+#       - /mnt/storage/media/YT-Archiver/wireguard:/wireguard   # the configs folder
 #
 # Usage
-#   1. Get WireGuard configs (Mullvad / Proton / your own) for each country.
-#   2. Fill the WIREGUARD_* values below (one service per country).
-#   3. Merge these services into your real compose (or `-f` it alongside), and
-#      put the vpn-* services + ytarchiver-backend on the SAME docker network.
-#   4. Set YTDLP_PROXIES on the backend (see the bottom block).
-#   5. Redeploy. Verify a proxy works:
-#        docker exec ytarchiver-backend sh -c \
-#          'https_proxy=http://vpn-de:8888 curl -s https://ipinfo.io/country'
-#      → should print the tunnel's country (e.g. DE), not your home country.
+#   1. mkdir the host folder, drop your *.conf WireGuard files in.
+#   2. Redeploy the backend once (to mount the socket + folder + env).
+#   3. That's it — add/remove configs in the folder anytime; the supervisor
+#      reconciles every few minutes. Watch it pick them up:
+#        docker logs ytarchiver-backend 2>&1 | grep vpn:
+#        docker ps --filter name=wgvpn-          # the live tunnels
 #
 # Notes
-#   • cap_add NET_ADMIN + the /dev/net/tun device are required by the tunnel.
-#   • FIREWALL_OUTBOUND_SUBNETS must include your Docker subnet so the backend
-#     on the LAN side can reach the proxy port.
-#   • Proxied downloads use the VPN's bandwidth — pick fast servers.
+#   • Each tunnel needs ~30s after creation to pass gluetun's healthcheck before
+#     it's added to the rotation. A dead/stale config stays unhealthy and unused.
+#   • Proxied downloads use the VPN's bandwidth — prefer fast servers.
+#   • Verify a tunnel's country once it's up:
+#        docker exec ytarchiver-backend sh -c \
+#          'https_proxy=http://<wgvpn-name>:8888 curl -s https://ipinfo.io/country'
+#   • Manual override / non-folder proxies still work via YTDLP_PROXIES
+#     (comma-separated proxy URLs); the folder tunnels are merged on top.
 # ─────────────────────────────────────────────────────────────────────────────
-
-services:
-  vpn-de:
-    image: qmcgaw/gluetun
-    container_name: vpn-de
-    cap_add: [NET_ADMIN]
-    devices: ["/dev/net/tun:/dev/net/tun"]
-    environment:
-      VPN_SERVICE_PROVIDER: custom
-      VPN_TYPE: wireguard
-      WIREGUARD_PRIVATE_KEY: "<DE_WIREGUARD_PRIVATE_KEY>"
-      WIREGUARD_ADDRESSES: "10.64.0.2/32"
-      WIREGUARD_PUBLIC_KEY: "<DE_PEER_PUBLIC_KEY>"
-      WIREGUARD_ENDPOINT_IP: "<DE_ENDPOINT_IP>"
-      WIREGUARD_ENDPOINT_PORT: "51820"
-      HTTPPROXY: "on"
-      FIREWALL_OUTBOUND_SUBNETS: "172.16.0.0/12"   # allow the Docker LAN
-    restart: unless-stopped
-
-  vpn-nl:
-    image: qmcgaw/gluetun
-    container_name: vpn-nl
-    cap_add: [NET_ADMIN]
-    devices: ["/dev/net/tun:/dev/net/tun"]
-    environment:
-      VPN_SERVICE_PROVIDER: custom
-      VPN_TYPE: wireguard
-      WIREGUARD_PRIVATE_KEY: "<NL_WIREGUARD_PRIVATE_KEY>"
-      WIREGUARD_ADDRESSES: "10.64.0.2/32"
-      WIREGUARD_PUBLIC_KEY: "<NL_PEER_PUBLIC_KEY>"
-      WIREGUARD_ENDPOINT_IP: "<NL_ENDPOINT_IP>"
-      WIREGUARD_ENDPOINT_PORT: "51820"
-      HTTPPROXY: "on"
-      FIREWALL_OUTBOUND_SUBNETS: "172.16.0.0/12"
-    restart: unless-stopped
-
-  vpn-us:
-    image: qmcgaw/gluetun
-    container_name: vpn-us
-    cap_add: [NET_ADMIN]
-    devices: ["/dev/net/tun:/dev/net/tun"]
-    environment:
-      VPN_SERVICE_PROVIDER: custom
-      VPN_TYPE: wireguard
-      WIREGUARD_PRIVATE_KEY: "<US_WIREGUARD_PRIVATE_KEY>"
-      WIREGUARD_ADDRESSES: "10.64.0.2/32"
-      WIREGUARD_PUBLIC_KEY: "<US_PEER_PUBLIC_KEY>"
-      WIREGUARD_ENDPOINT_IP: "<US_ENDPOINT_IP>"
-      WIREGUARD_ENDPOINT_PORT: "51820"
-      HTTPPROXY: "on"
-      FIREWALL_OUTBOUND_SUBNETS: "172.16.0.0/12"
-    restart: unless-stopped
-
-  # Add this env to your existing ytarchiver-backend service:
-  # ytarchiver-backend:
-  #   environment:
-  #     YTDLP_PROXIES: "http://vpn-de:8888,http://vpn-nl:8888,http://vpn-us:8888"

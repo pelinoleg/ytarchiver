@@ -77,7 +77,17 @@ class Settings(BaseSettings):
     # When set, extract_info tries them in turn and rotates to the next on a
     # YouTube block (bot wall / captcha / storyboard-only) or a dead tunnel,
     # remembering the last one that worked. Empty → direct connection (default).
+    # Folder-driven tunnels (below) are merged into this list automatically.
     ytdlp_proxies: str = ""
+
+    # Folder of WireGuard ``*.conf`` files. When set, the VPN supervisor brings
+    # up a gluetun tunnel per config (via the Docker socket) and routes yt-dlp
+    # through the HEALTHY ones, rotating on a YouTube block. Drop files in / pull
+    # them out at runtime — it reconciles every few minutes. No working configs
+    # → direct connection. Needs the Docker socket + this folder mounted and
+    # VPN_DOCKER_NETWORK set to the compose network.
+    wireguard_configs_dir: str = ""
+    vpn_docker_network: str = ""
 
     # Raw block device of the media disk (e.g. ``/dev/sda``) for SMART
     # temperature on the Storage dashboard. Requires the device be passed into

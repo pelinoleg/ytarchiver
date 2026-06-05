@@ -41,11 +41,22 @@ async def lifespan(app: FastAPI):
         log.exception("startup config backup failed (non-fatal)")
     configure_jobs()
     scheduler.start()
+    # Folder-driven WireGuard exit pool (no-op unless WIREGUARD_CONFIGS_DIR set).
+    try:
+        from services import vpn_supervisor
+        vpn_supervisor.start()
+    except Exception:
+        log.exception("vpn supervisor failed to start (non-fatal)")
     await worker.start()
     log.info("YT Archiver up. db=%s downloads=%s", settings.db_path, settings.download_dir)
     try:
         yield
     finally:
+        try:
+            from services import vpn_supervisor
+            vpn_supervisor.stop()
+        except Exception:
+            pass
         await worker.stop()
         # shutdown(wait=False) cancels any in-flight async job; APScheduler logs
         # that cancellation as an ERROR-with-traceback ("Error running job

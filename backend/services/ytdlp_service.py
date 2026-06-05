@@ -98,7 +98,20 @@ def _is_net_err(err: Exception) -> bool:
 
 
 def _proxy_list() -> list[str]:
-    return [p.strip() for p in (settings.ytdlp_proxies or "").split(",") if p.strip()]
+    """Static ``YTDLP_PROXIES`` plus any healthy folder-driven WireGuard tunnels,
+    de-duplicated (env entries first)."""
+    proxies = [p.strip() for p in (settings.ytdlp_proxies or "").split(",") if p.strip()]
+    try:
+        from services import vpn_supervisor
+        proxies += vpn_supervisor.current_proxies()
+    except Exception:
+        pass
+    out, seen = [], set()
+    for p in proxies:
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out
 
 
 # Last exit that worked ("" = direct, else a proxy URL). Starting the next call

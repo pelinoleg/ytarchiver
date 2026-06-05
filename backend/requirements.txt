@@ -9,3 +9,6 @@ yt-dlp>=2024.5
 bgutil-ytdlp-pot-provider>=1.0
 apscheduler>=3.10
 httpx>=0.27
+# Talks to the Docker socket to bring up folder-driven WireGuard (gluetun)
+# tunnels for yt-dlp exit rotation. Absent socket → supervisor inert, direct DL.
+docker>=7.0
