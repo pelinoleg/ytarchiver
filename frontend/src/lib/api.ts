@@ -70,6 +70,8 @@ export interface Video {
   kept_by_playlist?: boolean;
   /** True when the video is music only because it's in a music playlist. */
   is_music_via_playlist?: boolean;
+  /** True when the video is music because its channel is a music channel. */
+  is_music_via_channel?: boolean;
   /** Playlist the queued video belongs to (lowest id if several). Only set by
    *  the queue endpoint — used to group the Downloads page. */
   playlist_id?: number | null;

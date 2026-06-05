@@ -409,7 +409,7 @@ class DB:
 
     def list_manual_videos(self, *, limit: int = 120, offset: int = 0):
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail FROM videos v "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel FROM videos v "
             f"JOIN channels c ON c.id = v.channel_id "
             f"WHERE c.yt_channel_id = ? AND v.status = 'done' AND v.is_short = 0 "
             f"  AND {NOT_MUSIC_SQL} "
@@ -419,7 +419,7 @@ class DB:
 
     def list_favorite_videos(self, *, limit: int = 120, offset: int = 0):
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail FROM videos v "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel FROM videos v "
             f"LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.is_favorite = 1 AND v.status = 'done' AND v.is_short = 0 "
             f"  AND {NOT_MUSIC_SQL} "
@@ -445,7 +445,7 @@ class DB:
         global across pages."""
         fav = "AND v.is_favorite = 1 " if favorites_only else ""
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel, "
             f"       EXISTS ("
             f"         SELECT 1 FROM playlist_videos pv "
             f"         JOIN playlists p ON p.id = pv.playlist_id "
@@ -606,7 +606,7 @@ class DB:
         """Full video rows for a collection, in playlist order. Shape matches
         ``list_music_videos`` so VideoOut.from_row + the music UI just work."""
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel, "
             f"       EXISTS ("
             f"         SELECT 1 FROM playlist_videos pv "
             f"         JOIN playlists p ON p.id = pv.playlist_id "
@@ -707,7 +707,7 @@ class DB:
         in the UI; they only clutter the playlist.
         """
         return self.conn.execute(
-            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel, "
             "       pv.position AS playlist_position "
             "FROM playlist_videos pv "
             "JOIN videos v ON v.video_id = pv.video_id "
@@ -849,7 +849,7 @@ class DB:
             if channel_id is not None:
                 base_filter += " AND v.channel_id = ?"
             return self.conn.execute(
-                "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+                "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel "
                 "FROM videos v "
                 "LEFT JOIN channels c ON c.id = v.channel_id "
                 f"WHERE {base_filter} "
@@ -893,7 +893,7 @@ class DB:
         where = "WHERE " + " AND ".join(filters)
         params += [limit, offset]
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel "
             f"FROM videos v "
             f"LEFT JOIN channels c ON c.id = v.channel_id "
             f"{where} "
@@ -904,7 +904,7 @@ class DB:
 
     def get_video(self, video_id: str):
         return self.conn.execute(
-            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel, "
             "       EXISTS ("
             "         SELECT 1 FROM playlist_videos pv "
             "         JOIN playlists p ON p.id = pv.playlist_id "
@@ -1154,7 +1154,7 @@ class DB:
         if fts_q:
             try:
                 rows = self.conn.execute(
-                    f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+                    f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel, "
                     f"       fts.rank AS fts_rank, "
                     # Watch-history score: COUNT of watched videos from this
                     # channel within the last 90 days. SQLite returns 0 when
@@ -1186,7 +1186,7 @@ class DB:
         if rows:
             return rows
         rows = self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail FROM videos v "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel FROM videos v "
             f"LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.video_id != ? AND v.channel_id = ? AND v.status = 'done' "
             f"  AND v.is_short = 0 AND {NOT_MUSIC_SQL} "
@@ -1196,7 +1196,7 @@ class DB:
         if rows:
             return rows
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail FROM videos v "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel FROM videos v "
             f"LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.video_id != ? AND v.status = 'done' AND v.is_short = 0 "
             f"  AND {NOT_MUSIC_SQL} "
@@ -1227,7 +1227,7 @@ class DB:
 
     def list_active_queue(self):
         return self.conn.execute(
-            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, "
+            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel, "
             "       pl.id AS playlist_id, pl.title AS playlist_title "
             "FROM videos v "
             "LEFT JOIN channels c ON c.id = v.channel_id "
@@ -1269,7 +1269,7 @@ class DB:
 
     def list_history(self, limit: int = 200):
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel "
             f"FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.last_watched_at IS NOT NULL AND v.is_short = 0 "
             f"  AND {NOT_MUSIC_SQL} "
@@ -1281,7 +1281,7 @@ class DB:
 
     def list_largest_videos(self, limit: int = 30):
         return self.conn.execute(
-            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+            "SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel "
             "FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
             "WHERE v.status = 'done' AND v.file_size_bytes IS NOT NULL "
             "ORDER BY v.file_size_bytes DESC LIMIT ?",
@@ -1304,7 +1304,7 @@ class DB:
         """Videos with last_watched_at older than N days — natural cleanup
         candidates. Skips pinned / favorite / music."""
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel "
             f"FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.status = 'done' AND v.last_watched_at IS NOT NULL "
             f"  AND v.last_watched_at < datetime('now', ?) "
@@ -1339,7 +1339,7 @@ class DB:
     def list_largest_music_videos(self, limit: int = 10):
         """Top music clips by file size — for the Storage page's music section."""
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel "
             f"FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.status = 'done' AND v.file_size_bytes IS NOT NULL AND {IS_MUSIC_SQL} "
             f"ORDER BY v.file_size_bytes DESC LIMIT ?",
@@ -1366,7 +1366,7 @@ class DB:
         """Videos started but not yet finished — between 5% and 95% watched.
         Music tracks are excluded; they live in their own section."""
         return self.conn.execute(
-            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail "
+            f"SELECT v.*, c.name AS channel_name, c.thumbnail_url AS channel_thumbnail, COALESCE(c.is_music, 0) AS is_music_via_channel "
             f"FROM videos v LEFT JOIN channels c ON c.id = v.channel_id "
             f"WHERE v.status = 'done' AND v.is_short = 0 AND {NOT_MUSIC_SQL} "
             f"  AND v.duration IS NOT NULL AND v.duration > 0 "

@@ -381,7 +381,7 @@ export function WatchPage() {
   // can be audio-only. (Hook lives above the early returns.)
   useEffect(() => {
     if (!video) return;
-    const isMusic = !!(video.is_music || video.is_music_via_playlist);
+    const isMusic = !!(video.is_music || video.is_music_via_playlist || video.is_music_via_channel);
     if (audioOnlyPref && isMusic && video.has_audio === false) {
       const vid = video.video_id;
       // Hit the endpoint to kick extraction off, then refetch the row so
@@ -401,7 +401,7 @@ export function WatchPage() {
     return <p className="text-sm text-zinc-400">Video not found.</p>;
   }
 
-  const isMusicVideo = video.is_music || !!video.is_music_via_playlist;
+  const isMusicVideo = video.is_music || !!video.is_music_via_playlist || !!video.is_music_via_channel;
   // Playlist management is available for music clips AND any clip already in a
   // local playlist (e.g. one that was un-marked as music but kept in a list) —
   // so "in a playlist" always comes with a way to see which and change it.

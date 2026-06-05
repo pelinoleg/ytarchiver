@@ -94,7 +94,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
 
   // Re-derived locally so the music-mode features (background audio swap,
   // any future visual tweaks) don't need a prop drilled in from WatchPage.
-  const isMusicMode = !!(video.is_music || video.is_music_via_playlist);
+  const isMusicMode = !!(video.is_music || video.is_music_via_playlist || video.is_music_via_channel);
 
   // ── Quality variants ──────────────────────────────────────────────────────
   //
@@ -222,7 +222,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, Props>(function VideoPlayer(
     // Arm the resume target for THIS video. Music always starts at 0; a ``?t=``
     // deep link wins; otherwise the saved position. Runs before loadedmetadata
     // (layout effect) so the seek is queued in time.
-    const isMusic = video.is_music || video.is_music_via_playlist;
+    const isMusic = video.is_music || video.is_music_via_playlist || video.is_music_via_channel;
     const target = (startAtSeconds != null && startAtSeconds > 0)
       ? startAtSeconds
       : (isMusic ? 0 : (video.last_position_seconds ?? 0));

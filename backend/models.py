@@ -105,6 +105,11 @@ class VideoOut(BaseModel):
     # playlist (i.e. the inheritance route). Populated by ``get_video`` and
     # ``list_music_videos``.
     is_music_via_playlist: bool = False
+    # True when the video is music because its channel is flagged as a music
+    # channel. Populated wherever the channels join is selected (list_videos,
+    # get_video, list_music_videos). Lets the UI treat these like music too
+    # (no deletion warning, always play from 0).
+    is_music_via_channel: bool = False
     # The playlist a queued video belongs to, if any — used by the Downloads
     # page to group the queue. Only populated by ``list_active_queue``; a video
     # in several playlists reports the lowest playlist id.

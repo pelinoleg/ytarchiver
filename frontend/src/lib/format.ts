@@ -79,6 +79,7 @@ export function deletionForecast(
     is_favorite: boolean;
     is_music?: boolean;
     is_music_via_playlist?: boolean;
+    is_music_via_channel?: boolean;
     kept_by_playlist?: boolean;
     downloaded_at: string | null;
     duration: number | null;
@@ -92,7 +93,8 @@ export function deletionForecast(
 ): DeletionForecast {
   if (video.keep_forever)                                          return { kind: "never", reason: "pinned" };
   if (video.is_favorite)                                           return { kind: "never", reason: "favorite" };
-  if (video.is_music || video.is_music_via_playlist)               return { kind: "never", reason: "music" };
+  if (video.is_music || video.is_music_via_playlist || video.is_music_via_channel)
+                                                                   return { kind: "never", reason: "music" };
   if (video.kept_by_playlist)                                      return { kind: "never", reason: "playlist" };
 
   const watchedThreshold = globals?.delete_after_watched_percent ?? 0;
