@@ -97,6 +97,8 @@ export function MusicPage() {
     { width: 640, cols: 3 },
   ];
   const trackGridStyle = { "--card-min": `${trackCardMin}px` } as CSSProperties;
+  // Playlist / channel posters follow the same density slider as the videos.
+  const posterGridStyle = { "--card-min": `${cardMinRaw}px` } as CSSProperties;
 
   // Build + start a music queue from the GLOBAL ordered id list. ``startId``
   // rotates the queue to begin there; falls back to the loaded rows if the id
@@ -143,7 +145,7 @@ export function MusicPage() {
                 count={playlists.length + collections.length + (favorites.length > 0 ? 1 : 0)}
                 action={<NewPlaylistButton />}
               />
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]" style={posterGridStyle}>
                 {/* User-curated local playlists + YouTube music playlists load
                  *  fast. The Liked card depends on the heavy tracks query, so it
                  *  renders LAST — that way it appends at the end of the row when
@@ -162,7 +164,7 @@ export function MusicPage() {
           {musicChannels.length > 0 && (
             <section>
               <SectionHeader icon={Tv} title="Channels" count={musicChannels.length} />
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]" style={posterGridStyle}>
                 {musicChannels.map((c) => <MusicChannelCard key={c.id} channel={c} />)}
               </div>
             </section>

@@ -15,12 +15,18 @@ import {
   formatCount, nextSyncAt, timeAgo, timeUntil,
 } from "../lib/format";
 import { useConfirm } from "../components/ConfirmProvider";
+import { useCardMin } from "../components/DensitySlider";
+import type { CSSProperties } from "react";
 
 export function SubscriptionsPage() {
   const { data: channels = [], isLoading } = useQuery({
     queryKey: ["channels"],
     queryFn: channelsApi.list,
   });
+  // Channel cards follow the header density slider too, but with a higher floor
+  // — they're rich fixed-height cards that get unreadable when too narrow.
+  const [cardMin] = useCardMin();
+  const channelGridStyle = { "--card-min": `${Math.max(260, cardMin)}px` } as CSSProperties;
   const { data: folders = [] } = useQuery({
     queryKey: ["channel-folders"],
     queryFn: channelFoldersApi.list,
@@ -81,7 +87,7 @@ export function SubscriptionsPage() {
       />
 
       {isLoading ? (
-        <div className="mt-6 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]" style={channelGridStyle}>
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-56 rounded-xl bg-zinc-900 animate-pulse" />
           ))}
@@ -99,7 +105,7 @@ export function SubscriptionsPage() {
           Нет каналов в этой группе.
         </div>
       ) : (
-        <div className="mt-6 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-3 grid-cols-1 sm:grid-cols-2 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]" style={channelGridStyle}>
           {visible.map((c) => (
             <SubscriptionCard
               key={c.id}

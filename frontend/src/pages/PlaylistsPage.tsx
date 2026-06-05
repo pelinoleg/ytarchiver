@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -6,6 +7,7 @@ import {
 import { playlistsApi, type Playlist } from "../lib/api";
 import { timeAgo } from "../lib/format";
 import { PlaylistStack } from "../components/PlaylistStack";
+import { useCardMin } from "../components/DensitySlider";
 
 export function PlaylistsPage() {
   const { data: playlists = [], isLoading } = useQuery({
@@ -94,8 +96,14 @@ function PlaylistSection({
 }
 
 function CardGrid({ children }: { children: React.ReactNode }) {
+  // Desktop card size follows the header density slider (same as the video
+  // grid): a target card width drives an auto-fill column count.
+  const [cardMin] = useCardMin();
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div
+      className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:[grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr))]"
+      style={{ "--card-min": `${cardMin}px` } as CSSProperties}
+    >
       {children}
     </div>
   );
