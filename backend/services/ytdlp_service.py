@@ -39,6 +39,14 @@ def yt_opts_extra() -> dict:
         ea["youtubepot-bgutilhttp"] = {"base_url": [settings.pot_provider_url]}
     if ea:
         out["extractor_args"] = ea
+    # Politeness throttle — space requests/downloads so bursts (esp. a channel
+    # sync walking many videos) don't trip YouTube's rate-limiter / captcha.
+    if settings.ytdlp_sleep_requests and settings.ytdlp_sleep_requests > 0:
+        out["sleep_interval_requests"] = settings.ytdlp_sleep_requests
+    if settings.ytdlp_sleep_interval and settings.ytdlp_sleep_interval > 0:
+        out["sleep_interval"] = settings.ytdlp_sleep_interval
+        out["max_sleep_interval"] = max(settings.ytdlp_max_sleep_interval,
+                                        settings.ytdlp_sleep_interval)
     return out
 
 

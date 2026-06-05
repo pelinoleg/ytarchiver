@@ -62,6 +62,16 @@ class Settings(BaseSettings):
     # bot" wall on server IPs. Empty → plugin idle (no effect).
     pot_provider_url: str = ""
 
+    # Politeness throttle for yt-dlp — spacing requests/downloads out keeps the
+    # server IP from tripping YouTube's rate-limiter / captcha challenge (which
+    # POT can't solve). Applied to every YouTube call.
+    #   • sleep between HTTP requests during extraction (the worst offender when
+    #     a channel sync walks many videos at once)
+    ytdlp_sleep_requests: float = 1.0
+    #   • random pause before each video download (min..max seconds)
+    ytdlp_sleep_interval: float = 2.0
+    ytdlp_max_sleep_interval: float = 6.0
+
     # Raw block device of the media disk (e.g. ``/dev/sda``) for SMART
     # temperature on the Storage dashboard. Requires the device be passed into
     # the container + the SYS_RAWIO capability (see docker-compose). Empty → no
