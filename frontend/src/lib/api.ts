@@ -654,3 +654,25 @@ export const segmentsApi = {
   refresh: (videoId: string) =>
     request<{ video_id: string; count: number }>(`/api/videos/${videoId}/segments/refresh`, { method: "POST" }),
 };
+
+// ─── Network / VPN status (header chip) ──────────────────────────────────────
+export interface VpnTunnel {
+  name: string;
+  proxy: string;
+  country: string | null;
+}
+export interface VpnStatus {
+  vpn: boolean;
+  country: string | null;
+  exit: string | null;
+  tunnels: VpnTunnel[];
+  healthy_count: number;
+  state: "ok" | "blocked" | "unknown";
+  reason: string | null;
+  via: string | null;
+  checked_at: string | null;
+}
+export const vpnApi = {
+  status: () => request<VpnStatus>(`/api/vpn`),
+  rotate: () => request<VpnStatus>(`/api/vpn/rotate`, { method: "POST" }),
+};

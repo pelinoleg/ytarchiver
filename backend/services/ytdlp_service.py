@@ -5,6 +5,7 @@ import logging
 import os
 import random
 import re
+import time
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -118,6 +119,38 @@ def _proxy_list() -> list[str]:
 # on it avoids re-probing burned/dead exits every time.
 _last_good_net: Optional[str] = None
 
+# Last real download outcome — powers the header network-status chip.
+#   state: "ok" | "blocked" | "unknown"
+_outcome: dict = {"state": "unknown", "reason": None, "via": None, "at": None}
+
+
+def last_outcome() -> dict:
+    return dict(_outcome)
+
+
+def preferred_net() -> Optional[str]:
+    return _last_good_net
+
+
+def rotate_exit() -> Optional[str]:
+    """Manually advance the preferred exit to the next available proxy (the
+    header's "change VPN" button). No-op when nothing but direct is available."""
+    global _last_good_net
+    proxies = _proxy_list()
+    if not proxies:
+        return None
+    if _last_good_net in proxies:
+        i = proxies.index(_last_good_net)
+        _last_good_net = proxies[(i + 1) % len(proxies)]
+    else:
+        _last_good_net = proxies[0]
+    log.info("vpn: manual rotate → %s", _last_good_net)
+    return _last_good_net
+
+
+def _record(state: str, via: Optional[str], reason: Optional[str] = None) -> None:
+    _outcome.update(state=state, via=via or "direct", reason=reason, at=time.time())
+
 
 def _networks() -> list[str]:
     """Exit choices to try, in order. With proxies configured: the last-good one
@@ -161,6 +194,7 @@ def extract_info(url: str, opts: dict, *, download: bool = False, process: bool 
         try:
             res = _run(url, net_opts, download, process)
             _last_good_net = net
+            _record("ok", net)
             return res
         except Exception as e:
             last_exc = e
@@ -169,6 +203,7 @@ def extract_info(url: str, opts: dict, *, download: bool = False, process: bool 
                 try:
                     res = _run(url, {**net_opts, **cookies}, download, process)
                     _last_good_net = net
+                    _record("ok", net)
                     return res
                 except Exception as e2:
                     last_exc = e2
@@ -181,6 +216,12 @@ def extract_info(url: str, opts: dict, *, download: bool = False, process: bool 
                 continue
             raise
 
+    if last_exc is not None and _is_blocked(last_exc):
+        reason = ("captcha" if "captcha" in str(last_exc).lower()
+                  else "bot wall" if _is_bot_wall(last_exc)
+                  else "no formats" if "format" in str(last_exc).lower()
+                  else "blocked")
+        _record("blocked", _last_good_net, reason)
     raise last_exc
 
 

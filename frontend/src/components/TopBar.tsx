@@ -6,6 +6,7 @@ import {
 import { HomeViewToggle } from "./HomeViewToggle";
 import { CompactToggle } from "./CompactToggle";
 import { DensitySlider } from "./DensitySlider";
+import { NetworkStatusChip } from "./NetworkStatusChip";
 
 interface TopBarProps {
   onAddChannel: () => void;
@@ -134,6 +135,7 @@ export function TopBar({
           menu, settings. Generous spacing on phone too so items don't
           crowd each other under the user's thumb. */}
       <div className="flex items-center gap-2.5 sm:gap-3 md:gap-4">
+        <NetworkStatusChip />
         <AddMenu
           onAddChannel={onAddChannel}
           onAddPlaylist={onAddPlaylist}

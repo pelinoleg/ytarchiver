@@ -39,6 +39,7 @@ _RETRY_EVERY = 1800                  # secs a parked config waits before another
 
 _lock = threading.Lock()
 _proxies: list[str] = []             # current HEALTHY proxy URLs
+_country: dict[str, str] = {}        # proxy-host → ISO country code (best-effort)
 # Per-config health bookkeeping so we don't run dead tunnels 24/7:
 #   {name: {"unhealthy_since": float|None, "retry_after": float}}
 _state: dict[str, dict] = {}
@@ -49,6 +50,28 @@ def current_proxies() -> list[str]:
     """Healthy gluetun proxy URLs discovered from the configs folder."""
     with _lock:
         return list(_proxies)
+
+
+def tunnels_info() -> list[dict]:
+    """Healthy tunnels with their exit country, for the header status chip."""
+    with _lock:
+        return [{"name": p.split("//", 1)[1].split(":", 1)[0],
+                 "proxy": p,
+                 "country": _country.get(p.split("//", 1)[1].split(":", 1)[0])}
+                for p in _proxies]
+
+
+def _probe_country(name: str) -> None:
+    if name in _country:
+        return
+    try:
+        import httpx
+        with httpx.Client(proxy=f"http://{name}:{_PROXY_PORT}", timeout=8) as c:
+            cc = c.get("https://ipinfo.io/country").text.strip()
+        if cc and len(cc) <= 4:
+            _country[name] = cc
+    except Exception:
+        pass
 
 
 def _set_proxies(lst: list[str]) -> None:
@@ -215,6 +238,8 @@ def reconcile() -> None:
                     st["unhealthy_since"] = None
                     st["retry_after"] = now + _RETRY_EVERY
 
+        for p in healthy:
+            _probe_country(p.split("//", 1)[1].split(":", 1)[0])
         _set_proxies(healthy)
         parked = sum(1 for s in _state.values() if s["retry_after"] > now)
         log.info("vpn: %d config(s), %d healthy, %d parked", len(desired), len(healthy), parked)
