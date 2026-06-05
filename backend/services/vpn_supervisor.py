@@ -24,6 +24,7 @@ import os
 import re
 import socket
 import threading
+import time
 
 from config import settings
 
@@ -33,9 +34,14 @@ _GLUETUN_IMAGE = "qmcgaw/gluetun"
 _LABEL = "es.pelin.ytarchiver.vpn"   # marks the containers we own
 _PROXY_PORT = 8888
 _POLL_SECONDS = 180
+_QUARANTINE_AFTER = 300              # secs a tunnel may stay unhealthy before parking
+_RETRY_EVERY = 1800                  # secs a parked config waits before another attempt
 
 _lock = threading.Lock()
 _proxies: list[str] = []             # current HEALTHY proxy URLs
+# Per-config health bookkeeping so we don't run dead tunnels 24/7:
+#   {name: {"unhealthy_since": float|None, "retry_after": float}}
+_state: dict[str, dict] = {}
 _stop = threading.Event()
 
 
@@ -166,34 +172,52 @@ def reconcile() -> None:
         existing = {c.name: c for c in
                     client.containers.list(all=True, filters={"label": _LABEL})}
 
-        # Tear down tunnels whose config file is gone.
+        # Tear down (and forget) tunnels whose config file is gone.
         for name, cont in existing.items():
             if name not in desired:
                 log.info("vpn: removing stale tunnel %s", name)
                 _safe_remove(cont)
+                _state.pop(name, None)
 
-        # Ensure each desired tunnel is running.
         network = settings.vpn_docker_network or None
+        now = time.time()
+        healthy: list[str] = []
+
         for name, conf in desired.items():
+            st = _state.setdefault(name, {"unhealthy_since": None, "retry_after": 0.0})
             cont = existing.get(name)
+
+            # Parked dead config — stay torn down until its retry window opens.
+            if st["retry_after"] > now:
+                if cont is not None:
+                    _safe_remove(cont)
+                continue
+
+            # (Re)create if missing or not running.
             if cont is None or cont.status != "running":
                 if cont is not None:
                     _safe_remove(cont)
                 _run_gluetun(client, name, conf, network)
+                st["unhealthy_since"] = now
+                continue
 
-        # Collect only the HEALTHY tunnels — a stale config stays unhealthy and
-        # is therefore never used.
-        healthy: list[str] = []
-        for name in desired:
-            try:
-                cont = client.containers.get(name)
-                status = (cont.attrs.get("State", {}).get("Health") or {}).get("Status")
-                if status == "healthy":
-                    healthy.append(f"http://{name}:{_PROXY_PORT}")
-            except Exception:
-                pass
+            status = (cont.attrs.get("State", {}).get("Health") or {}).get("Status")
+            if status == "healthy":
+                st["unhealthy_since"] = None
+                healthy.append(f"http://{name}:{_PROXY_PORT}")
+            else:
+                if st["unhealthy_since"] is None:
+                    st["unhealthy_since"] = now
+                # Persistently unhealthy → park it so it stops churning, retry later.
+                if now - st["unhealthy_since"] >= _QUARANTINE_AFTER:
+                    log.info("vpn: parking unhealthy tunnel %s for %ds", name, _RETRY_EVERY)
+                    _safe_remove(cont)
+                    st["unhealthy_since"] = None
+                    st["retry_after"] = now + _RETRY_EVERY
+
         _set_proxies(healthy)
-        log.info("vpn: %d config(s), %d healthy tunnel(s)", len(desired), len(healthy))
+        parked = sum(1 for s in _state.values() if s["retry_after"] > now)
+        log.info("vpn: %d config(s), %d healthy, %d parked", len(desired), len(healthy), parked)
     except Exception:
         # Docker socket missing, SDK absent, daemon hiccup … keep the last good
         # list rather than yanking working tunnels on a transient error.
