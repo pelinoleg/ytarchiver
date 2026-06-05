@@ -832,11 +832,13 @@ function MusicChannelCard({ channel: c }: { channel: Channel }) {
   const count = c.video_count;
 
   return (
-    <div className="group block min-w-0">
-      <PlaylistStack accent="bg-sky-500/35" accentSoft="bg-sky-500/15">
+    <div className="group flex min-w-0 flex-col items-center text-center">
+      {/* Round avatar — a channel has one identity image, so a circle reads as
+       *  "channel", not a playlist/poster. */}
+      <div className="relative aspect-square w-full">
         <Link
           to={`/channel/${c.id}`}
-          className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-zinc-900 shadow-md shadow-black/30 transition-all duration-300 group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-sky-400/50 group-hover:shadow-xl group-hover:shadow-sky-900/40"
+          className="block h-full w-full overflow-hidden rounded-full bg-zinc-900 shadow-md shadow-black/30 ring-1 ring-white/10 transition-all duration-300 group-hover:ring-sky-400/60 group-hover:shadow-xl group-hover:shadow-sky-900/40"
         >
           {c.thumbnail_url ? (
             <img
@@ -848,51 +850,40 @@ function MusicChannelCard({ channel: c }: { channel: Channel }) {
             />
           ) : (
             <div className="grid h-full w-full place-items-center bg-gradient-to-br from-sky-700/30 via-blue-900/25 to-zinc-900">
-              <Tv className="h-10 w-10 text-sky-300/70" />
+              <Tv className="h-1/3 w-1/3 text-sky-300/70" />
             </div>
           )}
-
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/92 via-black/45 to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/10 to-transparent opacity-60" />
-
-          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded-full bg-sky-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow ring-1 ring-white/20 backdrop-blur-sm">
-            <Tv className="h-3 w-3" />
-            Channel
-          </span>
-          <span className="absolute top-1.5 right-1.5 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/10 backdrop-blur-md">
-            {count}
-          </span>
+          <div className="pointer-events-none absolute inset-0 rounded-full bg-black/0 transition-colors duration-300 group-hover:bg-black/25" />
         </Link>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2 p-2.5 pt-10">
-          <div className="min-w-0 flex-1">
-            <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]" title={c.name}>
-              {c.name}
-            </h3>
-            <p className="mt-0.5 truncate text-[11px] text-zinc-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-              {count} {count === 1 ? "track" : "tracks"}
-            </p>
+        {count > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex items-center justify-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+            <button
+              onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
+              aria-label="Shuffle" title="Shuffle"
+              className="pointer-events-auto grid h-8 w-8 place-items-center rounded-full bg-zinc-900/90 text-sky-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
+            <button
+              onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
+              aria-label="Play" title="Play"
+              className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full bg-sky-500 text-white shadow-xl shadow-sky-900/50 hover:bg-sky-400 active:scale-95 transition-transform"
+            >
+              <Play className="h-5 w-5 fill-current translate-x-0.5" />
+            </button>
           </div>
-          {count > 0 && (
-            <div className="pointer-events-auto flex flex-shrink-0 items-center gap-1.5 sm:opacity-0 sm:translate-y-1 sm:transition-all sm:duration-300 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
-              <button
-                onClick={(e) => { e.preventDefault(); setMusicShuffle(true); play(true); }}
-                aria-label="Shuffle" title="Shuffle"
-                className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900/90 text-sky-200 ring-1 ring-white/15 shadow-lg shadow-black/40 backdrop-blur-sm hover:bg-zinc-800 active:scale-95"
-              >
-                <Shuffle className="h-4 w-4" />
-              </button>
-              <button
-                onClick={(e) => { e.preventDefault(); play(getMusicShuffle()); }}
-                aria-label="Play" title="Play"
-                className="grid h-10 w-10 place-items-center rounded-full bg-sky-500 text-white shadow-xl shadow-sky-900/50 hover:bg-sky-400 active:scale-95 transition-transform"
-              >
-                <Play className="h-5 w-5 fill-current translate-x-0.5" />
-              </button>
-            </div>
-          )}
-        </div>
-      </PlaylistStack>
+        )}
+      </div>
+
+      <Link to={`/channel/${c.id}`} className="mt-2.5 block w-full px-1">
+        <h3 className="truncate text-sm font-semibold text-zinc-100 group-hover:text-white" title={c.name}>
+          {c.name}
+        </h3>
+        <p className="mt-0.5 truncate text-[11px] text-zinc-500">
+          <span className="font-medium text-sky-300">Channel</span> · {count} {count === 1 ? "track" : "tracks"}
+        </p>
+      </Link>
     </div>
   );
 }
