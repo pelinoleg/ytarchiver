@@ -72,6 +72,13 @@ class Settings(BaseSettings):
     ytdlp_sleep_interval: float = 2.0
     ytdlp_max_sleep_interval: float = 6.0
 
+    # Comma-separated proxy URLs for yt-dlp (e.g. per-country WireGuard tunnels
+    # each fronted by an HTTP/SOCKS proxy: ``http://vpn-de:8888,http://vpn-nl:8888``).
+    # When set, extract_info tries them in turn and rotates to the next on a
+    # YouTube block (bot wall / captcha / storyboard-only) or a dead tunnel,
+    # remembering the last one that worked. Empty → direct connection (default).
+    ytdlp_proxies: str = ""
+
     # Raw block device of the media disk (e.g. ``/dev/sda``) for SMART
     # temperature on the Storage dashboard. Requires the device be passed into
     # the container + the SYS_RAWIO capability (see docker-compose). Empty → no

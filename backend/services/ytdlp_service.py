@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import random
 import re
 from datetime import date, timedelta
 from pathlib import Path
@@ -66,30 +67,108 @@ def cookie_opts() -> dict:
 
 _BOT_WALL_MARKERS = ("sign in to confirm", "not a bot", "confirm you're not a bot")
 
+# YouTube blocks we treat as "this exit IP is burned, rotate to another":
+#   • the bot wall, • the captcha gate, • storyboard-only responses (the player
+#     returns only images, so audio/video format selection fails).
+_BLOCK_MARKERS = (
+    "sign in to confirm", "not a bot", "confirm you're not a bot",
+    "captcha",
+    "only images are available", "requested format is not available",
+)
+# Proxy/transport failures → that tunnel is down, also rotate past it.
+_NET_ERR_MARKERS = (
+    "proxy", "tunnel", "timed out", "timeout", "unable to connect",
+    "connection reset", "connection refused", "network is unreachable",
+)
+
 
 def _is_bot_wall(err: Exception) -> bool:
     s = str(err).lower()
     return any(m in s for m in _BOT_WALL_MARKERS)
 
 
-def extract_info(url: str, opts: dict, *, download: bool = False, process: bool = True):
-    """``YoutubeDL.extract_info`` with cookies used ONLY as a bot-wall fallback.
+def _is_blocked(err: Exception) -> bool:
+    s = str(err).lower()
+    return any(m in s for m in _BLOCK_MARKERS)
 
-    We try anonymously first because an authenticated YouTube session often
-    returns storyboard-only formats (no video/audio), which breaks downloads on
-    clips that work fine without cookies. Cookies are added on a retry only when
-    the anonymous attempt hits the "Sign in to confirm you're not a bot" wall.
+
+def _is_net_err(err: Exception) -> bool:
+    s = str(err).lower()
+    return any(m in s for m in _NET_ERR_MARKERS)
+
+
+def _proxy_list() -> list[str]:
+    return [p.strip() for p in (settings.ytdlp_proxies or "").split(",") if p.strip()]
+
+
+# Last exit that worked ("" = direct, else a proxy URL). Starting the next call
+# on it avoids re-probing burned/dead exits every time.
+_last_good_net: Optional[str] = None
+
+
+def _networks() -> list[str]:
+    """Exit choices to try, in order. With proxies configured: the last-good one
+    first, then the rest shuffled, then direct ("") as a final fallback. Without
+    proxies: just direct — unchanged behaviour."""
+    proxies = _proxy_list()
+    if not proxies:
+        return [""]
+    order = proxies[:]
+    random.shuffle(order)
+    nets = order + [""]
+    if _last_good_net is not None and _last_good_net in nets:
+        nets.remove(_last_good_net)
+        nets.insert(0, _last_good_net)
+    return nets
+
+
+def _run(url, opts, download, process):
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        return ydl.extract_info(url, download=download, process=process)
+
+
+def extract_info(url: str, opts: dict, *, download: bool = False, process: bool = True):
+    """Extract (and optionally download) with two layers of resilience:
+
+    1. **Exit rotation** — when ``YTDLP_PROXIES`` lists proxies (each typically a
+       per-country WireGuard tunnel), try them in turn and switch on a YouTube
+       block (bot wall / captcha / storyboard-only) or a dead tunnel. The last
+       working exit is remembered for the next call.
+    2. **Cookie fallback** — on each exit, if the anonymous try hits the bot wall
+       and cookies are configured, retry that exit with cookies. (Anonymous goes
+       first because an authenticated session often yields storyboard-only
+       formats on clips that work fine without cookies.)
     """
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(url, download=download, process=process)
-    except Exception as e:
-        cookies = cookie_opts()
-        if not cookies or not _is_bot_wall(e):
+    global _last_good_net
+    cookies = cookie_opts()
+    last_exc: Optional[Exception] = None
+
+    for net in _networks():
+        net_opts = {**opts, **({"proxy": net} if net else {})}
+        try:
+            res = _run(url, net_opts, download, process)
+            _last_good_net = net
+            return res
+        except Exception as e:
+            last_exc = e
+            # Bot wall + cookies → retry THIS exit with cookies before rotating.
+            if cookies and _is_bot_wall(e):
+                try:
+                    res = _run(url, {**net_opts, **cookies}, download, process)
+                    _last_good_net = net
+                    return res
+                except Exception as e2:
+                    last_exc = e2
+                    e = e2
+            # Rotate on a block or a dead tunnel; otherwise the error is genuine
+            # (private / unavailable / …) — don't spin through every exit.
+            if _is_blocked(e) or _is_net_err(e):
+                if net:
+                    log.info("yt-dlp: exit %s blocked/down on %s — rotating", net, url)
+                continue
             raise
-        log.info("yt-dlp: bot wall on %s — retrying with cookies", url)
-        with yt_dlp.YoutubeDL({**opts, **cookies}) as ydl:
-            return ydl.extract_info(url, download=download, process=process)
+
+    raise last_exc
 
 
 # Channel-page subpaths yt-dlp accepts. We pin to /videos to exclude Shorts/Live tabs.
