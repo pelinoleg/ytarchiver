@@ -374,7 +374,8 @@ class DB:
             f"SELECT c.*, "
             f"       (SELECT COUNT(*) FROM videos v "
             f"        WHERE v.channel_id = c.id AND v.is_short = 0 "
-            f"          AND v.status = 'done' AND {NOT_MUSIC_SQL}) AS video_count, "
+            f"          AND v.status = 'done' "
+            f"          AND (c.is_music = 1 OR {NOT_MUSIC_SQL})) AS video_count, "
             # "Recent" — YouTube upload timestamp within the last 24h.
             # Powers the red sidebar badge. Uses upload_timestamp (epoch
             # seconds, from yt-dlp) rather than downloaded_at so backfills
@@ -382,7 +383,7 @@ class DB:
             # just because we grabbed them today.
             f"       (SELECT COUNT(*) FROM videos v "
             f"        WHERE v.channel_id = c.id AND v.is_short = 0 "
-            f"          AND v.status = 'done' AND {NOT_MUSIC_SQL} "
+            f"          AND v.status = 'done' AND (c.is_music = 1 OR {NOT_MUSIC_SQL}) "
             f"          AND v.upload_timestamp IS NOT NULL "
             f"          AND v.upload_timestamp >= CAST(strftime('%s','now','-1 day') AS INTEGER)"
             f"       ) AS recent_count "
@@ -842,7 +843,9 @@ class DB:
             # asking for "anything that matches", including from hidden channels.
             # It also hides music-flagged items so the regular search doesn't
             # surface them.
-            base_filter = f"v.is_short = 0 AND v.status = 'done' AND {NOT_MUSIC_SQL}"
+            base_filter = "v.is_short = 0 AND v.status = 'done'"
+            if channel_id is None:
+                base_filter += f" AND {NOT_MUSIC_SQL}"
             if channel_id is not None:
                 base_filter += " AND v.channel_id = ?"
             return self.conn.execute(
@@ -860,8 +863,13 @@ class DB:
                 "LIMIT ? OFFSET ?",
                 ((channel_id,) if channel_id is not None else ()) + (like, like, like, like, limit, offset),
             ).fetchall()
-        filters = ["v.is_short = 0", NOT_MUSIC_SQL]
+        filters = ["v.is_short = 0"]
         params: list = []
+        # Hide music from the global lists — but when viewing a SPECIFIC channel
+        # show everything, since a music channel's videos live on its page too
+        # (otherwise the channel page looks empty).
+        if channel_id is None:
+            filters.append(NOT_MUSIC_SQL)
         if channel_id is not None:
             filters.append("v.channel_id = ?")
             params.append(channel_id)
